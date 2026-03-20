@@ -1,58 +1,58 @@
-# AI Context
+﻿# AI CONTEXT
 
-## Purpose
-`codexSync` is a local CLI utility for cold-syncing Codex state between two personal machines through a synchronized folder.
+## PURPOSE
+`CODEXSYNC` IS A LOCAL CLI UTILITY FOR COLD-SYNCING CODEX STATE BETWEEN TWO PERSONAL MACHINES THROUGH A SYNCHRONIZED FOLDER.
 
-## Goal
-Allow developers to continue work on a second machine without losing Codex local context.
+## GOAL
+ALLOW DEVELOPERS TO CONTINUE WORK ON A SECOND MACHINE WITHOUT LOSING CODEX LOCAL CONTEXT.
 
-## Core Assumptions
-- Sync runs only when Codex is fully closed.
-- Only one active machine is used at a time.
-- The user is responsible for cloud sync readiness and available storage capacity.
-- The project does not use Codex APIs and does not interfere with Codex runtime internals.
+## CORE ASSUMPTIONS
+- SYNC RUNS ONLY WHEN CODEX IS FULLY CLOSED.
+- ONLY ONE ACTIVE MACHINE IS USED AT A TIME.
+- THE USER IS RESPONSIBLE FOR CLOUD SYNC READINESS AND AVAILABLE STORAGE CAPACITY.
+- THE PROJECT DOES NOT USE CODEX APIS AND DOES NOT INTERFERE WITH CODEX RUNTIME INTERNALS.
 
-## Target Platforms and Versions
-- Python: `3.8+` (minimum supported version).
-- Windows: `Windows 10+`.
-- macOS:
-  - Officially confirmed: Codex app is available on `macOS (Apple Silicon)`.
-  - Architecture constraint: Intel Mac is not treated as a target platform.
-  - Minimum macOS version is not explicitly fixed in public docs; until separate validation, target `macOS 14+` on Apple Silicon (working assumption).
-- Linux: future support is possible, but versions are not fixed until official Codex Linux availability.
+## TARGET PLATFORMS AND VERSIONS
+- PYTHON: `3.8+` (MINIMUM SUPPORTED VERSION).
+- WINDOWS: `WINDOWS 10+`.
+- MACOS:
+  - OFFICIALLY CONFIRMED: CODEX APP IS AVAILABLE ON `MACOS (APPLE SILICON)`.
+  - ARCHITECTURE CONSTRAINT: INTEL MAC IS NOT TREATED AS A TARGET PLATFORM.
+  - MINIMUM MACOS VERSION IS NOT EXPLICITLY FIXED IN PUBLIC DOCS; UNTIL SEPARATE VALIDATION, TARGET `MACOS 14+` ON APPLE SILICON (WORKING ASSUMPTION).
+- LINUX: FUTURE SUPPORT IS POSSIBLE, BUT VERSIONS ARE NOT FIXED UNTIL OFFICIAL CODEX LINUX AVAILABILITY.
 
-## Run Modes
-- Direct run: manual (`python ...` or packaged binary).
-- Scheduled run:
-  - Windows: Task Scheduler.
-  - macOS: `launchd` (LaunchAgent) or equivalent scheduled job.
-- For Windows, packaging the Python script into `.exe` (for example via PyInstaller) is allowed to simplify deployment.
+## RUN MODES
+- DIRECT RUN: MANUAL (`PYTHON ...` OR PACKAGED BINARY).
+- SCHEDULED RUN:
+  - WINDOWS: TASK SCHEDULER.
+  - MACOS: `LAUNCHD` (LAUNCHAGENT) OR EQUIVALENT SCHEDULED JOB.
+- FOR WINDOWS, PACKAGING THE PYTHON SCRIPT INTO `.EXE` (FOR EXAMPLE VIA PYINSTALLER) IS ALLOWED TO SIMPLIFY DEPLOYMENT.
 
-## MVP Features
-1. Detect Codex process (Windows at minimum, with macOS extension).
-2. Detect Codex state directory.
-3. Compare local and cloud copies.
-4. Sync changes.
-5. Enforce backup before overwrite.
-6. Exclude temp/lock/cache files.
+## MVP FEATURES
+1. DETECT CODEX PROCESS (WINDOWS AT MINIMUM, WITH MACOS EXTENSION).
+2. DETECT CODEX STATE DIRECTORY.
+3. COMPARE LOCAL AND CLOUD COPIES.
+4. SYNC CHANGES.
+5. ENFORCE BACKUP BEFORE OVERWRITE.
+6. EXCLUDE TEMP/LOCK/CACHE FILES.
 
-## Safety Criteria
-- Never write to state while Codex is running.
-- Always create a backup before overwrite.
-- On uncertainty, fail-safe (abort without writes).
+## SAFETY CRITERIA
+- NEVER WRITE TO STATE WHILE CODEX IS RUNNING.
+- ALWAYS CREATE A BACKUP BEFORE OVERWRITE.
+- ON UNCERTAINTY, FAIL-SAFE (ABORT WITHOUT WRITES).
 
-## Recorded Decisions
-- Conflict policy: if both sides changed, treat as conflict, do not sync, print conflict file list, and exit.
-- Conflict resolution: manual by user; rerun required after manual resolution.
-- Logging:
-  - Levels: `DEBUG|INFO|WARNING|ERROR`.
-  - Formats: `text|json|logfmt` (configurable).
-  - Rotation: retention-based, default `7` days.
-- File-time normalization: no dedicated normalization/clock compensation in MVP; rely on OS/filesystem timestamps.
-- CLI exit codes (for CI/automation):
-  - `0` success (including no-op).
-  - `1` runtime error.
-  - `2` conflicts detected, manual resolution required.
-  - `3` Codex is running, sync blocked.
-  - `4` config or argument error.
-  - `5` safe abort (`fail-safe`) due to uncertain state.
+## RECORDED DECISIONS
+- CONFLICT POLICY: IF BOTH SIDES CHANGED, TREAT AS CONFLICT, DO NOT SYNC, PRINT CONFLICT FILE LIST, AND EXIT.
+- CONFLICT RESOLUTION: MANUAL BY USER; RERUN REQUIRED AFTER MANUAL RESOLUTION.
+- LOGGING:
+  - LEVELS: `DEBUG|INFO|WARNING|ERROR`.
+  - FORMATS: `TEXT|JSON|LOGFMT` (CONFIGURABLE).
+  - ROTATION: RETENTION-BASED, DEFAULT `7` DAYS.
+- FILE-TIME NORMALIZATION: NO DEDICATED NORMALIZATION/CLOCK COMPENSATION IN MVP; RELY ON OS/FILESYSTEM TIMESTAMPS.
+- CLI EXIT CODES (FOR CI/AUTOMATION):
+  - `0` SUCCESS (INCLUDING NO-OP).
+  - `1` RUNTIME ERROR.
+  - `2` CONFLICTS DETECTED, MANUAL RESOLUTION REQUIRED.
+  - `3` CODEX IS RUNNING, SYNC BLOCKED.
+  - `4` CONFIG OR ARGUMENT ERROR.
+  - `5` SAFE ABORT (`FAIL-SAFE`) DUE TO UNCERTAIN STATE.

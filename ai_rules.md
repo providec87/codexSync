@@ -1,76 +1,76 @@
-# AI Rules
+﻿# AI RULES
 
-## 1. Scope
-- Work only with local files.
-- Do not use Codex APIs.
-- Do not extract tokens, credentials, or secrets.
-- Do not intercept network traffic.
-- Do not modify Codex binaries or runtime.
-- Do not check cloud client process state.
-- Do not check free space in cloud/network storage.
+## 1. SCOPE
+- WORK ONLY WITH LOCAL FILES.
+- DO NOT USE CODEX APIS.
+- DO NOT EXTRACT TOKENS, CREDENTIALS, OR SECRETS.
+- DO NOT INTERCEPT NETWORK TRAFFIC.
+- DO NOT MODIFY CODEX BINARIES OR RUNTIME.
+- DO NOT CHECK CLOUD CLIENT PROCESS STATE.
+- DO NOT CHECK FREE SPACE IN CLOUD/NETWORK STORAGE.
 
-## 2. Mandatory Sync Model
-- Cold sync only.
-- Sync is allowed only when Codex is fully stopped.
-- One active machine at a time.
-- Handoff protocol is mandatory:
-  1. Close Codex on source machine.
-  2. Wait for cloud propagation.
-  3. Run sync on target machine.
-  4. Start Codex on target machine only after sync is complete.
+## 2. MANDATORY SYNC MODEL
+- COLD SYNC ONLY.
+- SYNC IS ALLOWED ONLY WHEN CODEX IS FULLY STOPPED.
+- ONE ACTIVE MACHINE AT A TIME.
+- HANDOFF PROTOCOL IS MANDATORY:
+  1. CLOSE CODEX ON SOURCE MACHINE.
+  2. WAIT FOR CLOUD PROPAGATION.
+  3. RUN SYNC ON TARGET MACHINE.
+  4. START CODEX ON TARGET MACHINE ONLY AFTER SYNC IS COMPLETE.
 
-## 3. Safety Guarantees
-- Always create a backup before any overwrite.
-- If data state is uncertain, exit without writing.
-- Exclude temporary, lock, and cache files from sync.
-- Never delete source data without a confirmed backup.
+## 3. SAFETY GUARANTEES
+- ALWAYS CREATE A BACKUP BEFORE ANY OVERWRITE.
+- IF DATA STATE IS UNCERTAIN, EXIT WITHOUT WRITING.
+- EXCLUDE TEMPORARY, LOCK, AND CACHE FILES FROM SYNC.
+- NEVER DELETE SOURCE DATA WITHOUT A CONFIRMED BACKUP.
 
-## 4. Technical Requirements
-- Minimum Python version: `3.8`.
-- Supported OS:
-  - Windows `10+`.
-  - macOS on `Apple Silicon` (minimum OS version requires separate validation; working target: `14+`).
-  - Linux: out of current MVP scope (pending official Codex Linux release).
+## 4. TECHNICAL REQUIREMENTS
+- MINIMUM PYTHON VERSION: `3.8`.
+- SUPPORTED OS:
+  - WINDOWS `10+`.
+  - MACOS ON `APPLE SILICON` (MINIMUM OS VERSION REQUIRES SEPARATE VALIDATION; WORKING TARGET: `14+`).
+  - LINUX: OUT OF CURRENT MVP SCOPE (PENDING OFFICIAL CODEX LINUX RELEASE).
 
-## 5. Tool Interface Requirements
-- CLI-first.
-- Configuration file support.
-- Detailed logging.
-- `--dry-run` mode.
-- Scheduled mode:
-  - Windows Task Scheduler.
-  - macOS LaunchAgent (`launchd`).
-- For Windows, `.exe` packaging is allowed.
+## 5. TOOL INTERFACE REQUIREMENTS
+- CLI-FIRST.
+- CONFIGURATION FILE SUPPORT.
+- DETAILED LOGGING.
+- `--DRY-RUN` MODE.
+- SCHEDULED MODE:
+  - WINDOWS TASK SCHEDULER.
+  - MACOS LAUNCHAGENT (`LAUNCHD`).
+- FOR WINDOWS, `.EXE` PACKAGING IS ALLOWED.
 
-## 6. Implementation Rules
-- Any sync operation must be idempotent within a single run.
-- Change comparison: timestamp first, hash when ambiguous.
-- Log dangerous actions separately (create backup, overwrite, skip).
-- Conflict when both sides changed:
-  - Do not perform sync writes.
-  - Return conflict code.
-  - Print conflict file list.
-  - Require manual resolution and rerun.
-- No separate file-time normalization in MVP (no UTC conversion and no clock drift compensation).
+## 6. IMPLEMENTATION RULES
+- ANY SYNC OPERATION MUST BE IDEMPOTENT WITHIN A SINGLE RUN.
+- CHANGE COMPARISON: TIMESTAMP FIRST, HASH WHEN AMBIGUOUS.
+- LOG DANGEROUS ACTIONS SEPARATELY (CREATE BACKUP, OVERWRITE, SKIP).
+- CONFLICT WHEN BOTH SIDES CHANGED:
+  - DO NOT PERFORM SYNC WRITES.
+  - RETURN CONFLICT CODE.
+  - PRINT CONFLICT FILE LIST.
+  - REQUIRE MANUAL RESOLUTION AND RERUN.
+- NO SEPARATE FILE-TIME NORMALIZATION IN MVP (NO UTC CONVERSION AND NO CLOCK DRIFT COMPENSATION).
 
-## 7. CLI Exit Codes
-- `0` success (completed or no changes).
-- `1` runtime error.
-- `2` conflict detected (manual handling required).
-- `3` codex running (cold-sync precondition violated).
-- `4` config/args error (invalid config or CLI parameters).
-- `5` safe abort (fail-safe stop).
+## 7. CLI EXIT CODES
+- `0` SUCCESS (COMPLETED OR NO CHANGES).
+- `1` RUNTIME ERROR.
+- `2` CONFLICT DETECTED (MANUAL HANDLING REQUIRED).
+- `3` CODEX RUNNING (COLD-SYNC PRECONDITION VIOLATED).
+- `4` CONFIG/ARGS ERROR (INVALID CONFIG OR CLI PARAMETERS).
+- `5` SAFE ABORT (FAIL-SAFE STOP).
 
-## 8. Minimum MVP Test Set
-- Unit tests for exclusion filtering.
-- Unit tests for source-side selection in comparison logic.
-- Integration test for dry-run without disk writes.
-- Integration test for backup+overwrite on test directories.
-- Integration conflict test: no writes, conflict list output, exit code `2`.
+## 8. MINIMUM MVP TEST SET
+- UNIT TESTS FOR EXCLUSION FILTERING.
+- UNIT TESTS FOR SOURCE-SIDE SELECTION IN COMPARISON LOGIC.
+- INTEGRATION TEST FOR DRY-RUN WITHOUT DISK WRITES.
+- INTEGRATION TEST FOR BACKUP+OVERWRITE ON TEST DIRECTORIES.
+- INTEGRATION CONFLICT TEST: NO WRITES, CONFLICT LIST OUTPUT, EXIT CODE `2`.
 
-## 9. Definition of Done (MVP)
-- Tool blocks sync correctly when Codex is running.
-- Creates backup before overwrite in every overwrite scenario.
-- Executes dry-run safely with a readable report.
-- Works on Windows 10+ and on macOS Apple Silicon in validated test configuration.
-- On conflict, performs no writes and exits with code `2`.
+## 9. DEFINITION OF DONE (MVP)
+- TOOL BLOCKS SYNC CORRECTLY WHEN CODEX IS RUNNING.
+- CREATES BACKUP BEFORE OVERWRITE IN EVERY OVERWRITE SCENARIO.
+- EXECUTES DRY-RUN SAFELY WITH A READABLE REPORT.
+- WORKS ON WINDOWS 10+ AND ON MACOS APPLE SILICON IN VALIDATED TEST CONFIGURATION.
+- ON CONFLICT, PERFORMS NO WRITES AND EXITS WITH CODE `2`.

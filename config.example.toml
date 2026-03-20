@@ -1,0 +1,141 @@
+# codexSync - пример конфигурации
+# Все комментарии в этом файле даны на русском языке.
+
+[identity]
+# Стабильный ID машины (задайте вручную, не используйте случайный при каждом запуске)
+machine_id = "machine-a"
+
+[sync]
+# Режим синхронизации: только cold (Codex должен быть закрыт)
+mode = "cold"
+# Направление: двусторонняя синхронизация на основе mtime
+direction = "bidirectional"
+# Алгоритм сравнения
+compare = "mtime"
+# Допуск по времени (сек), чтобы сгладить небольшие различия файловых систем
+time_tolerance_seconds = 0
+# Если mtime равны, ничего не делаем (по операционному протоколу это допустимо)
+equal_mtime_action = "skip"
+# Удаления не распространяем (безопасный режим)
+delete_policy = "never"
+# Режим dry-run по умолчанию
+dry_run_default = true
+# Специальный режим для сессий: синхронизировать только последнюю дату в .codex/sessions
+session_mode = "last_date_only"
+
+[paths]
+# Корневая рабочая папка codexSync (для подстановки в остальные пути)
+workspace_root_dir = "D:/GDrive/codexSync"
+# Локальная директория состояния Codex
+local_state_dir = "C:/Users/USERNAME/.codex"
+# Общая директория в облаке/сетевой папке (пример из обсуждения)
+cloud_root_dir = "${workspace_root}/sync"
+# Куда складывать резервные копии перед перезаписью
+backup_dir = "${workspace_root}/backups"
+# Временная директория для атомарных операций (tmp + rename)
+temp_dir = "${workspace_root}/.tmp"
+
+[targets]
+# Относительные пути от local_state_dir/cloud_state_dir, которые участвуют в sync
+include_roots = [
+  "sessions",
+  "session_index.jsonl",
+  "skills",
+  "plugins",
+]
+
+[filters]
+# Глобальные исключения (временные/кэш/локи и пр.)
+exclude_globs = [
+  "**/*.lock",
+  "**/*.tmp",
+  "**/*.temp",
+  "**/tmp/**",
+  "**/cache/**",
+  "**/.cache/**",
+  "**/__pycache__/**",
+  "**/*.log",
+]
+
+[conflict]
+# Политика конфликтов:
+# manual_abort|prefer_cloud|prefer_local|prefer_newer_mtime
+policy = "manual_abort"
+# Выводить список конфликтных файлов в отчёт
+report_conflicts = true
+
+[backup]
+# Делать backup перед любой перезаписью целевого файла
+backup_before_overwrite = true
+# Срок хранения бэкапов (дней)
+retention_days = 30
+# Максимум архивов/каталогов бэкапа (0 = без лимита)
+max_backups = 0
+# Сжатие бэкапов: none|zip
+compression = "none"
+
+[safety]
+# Никогда не писать в состояние, если Codex запущен
+require_codex_stopped = true
+# При неопределённости завершаться с ошибкой (safe fail)
+fail_on_unknown = true
+
+[process_detection]
+# Имена процесса Codex для разных ОС
+process_names = ["codex.exe", "codex"]
+# Небольшая пауза после закрытия процесса перед началом sync
+grace_period_seconds = 2
+# Разрешить завершать процессы Codex автоматически перед sync (только Windows)
+allow_terminate_if_running = true
+# По умолчанию требовать ручное подтверждение через GUI перед завершением
+manual_terminate_confirmation = true
+# Где спрашивать подтверждение завершения: gui|console
+terminate_confirmation_mode = "gui"
+# Таймаут ожидания полного завершения после terminate (сек)
+terminate_timeout_seconds = 20
+
+[process_detection.background_process_names]
+# Фоновые процессы, которые считаются "Codex ещё не завершён"
+windows = ["codex-windows-sandbox"]
+macos = []
+linux = []
+
+[state]
+# Служебные файлы координации между машинами
+manifest_file = "${workspace_root}/state/manifest.json"
+#lease_file = "D:/GDrive/codexSync/lease.json"
+#history_dir = "D:/GDrive/codexSync/history"
+# TTL lease (сек): если истёк, другая машина может перехватить sync
+#lease_ttl_seconds = 300
+# Версия схемы служебных файлов
+data_version = 1
+
+[scheduler]
+# Включать ли расписание (ручной запуск всегда доступен)
+enabled = false
+# Тип планировщика: windows_task_scheduler|cron|launchd|systemd
+kind = "windows_task_scheduler"
+# Интервал запуска в минутах
+interval_minutes = 10
+# Случайная задержка старта (сек), чтобы уменьшить одновременный запуск на двух машинах
+jitter_seconds = 30
+
+[logging]
+# Уровень логирования: DEBUG|INFO|WARNING|ERROR
+level = "INFO"
+# Путь до лог-файла
+file = "${workspace_root}/logs/codexsync.log"
+# Формат логов: text|json|logfmt
+format = "text"
+# Ротация логов по сроку хранения (дней)
+retention_days = 7
+
+[assumptions]
+# ВАЖНО: это фиксирует операционный контракт проекта.
+# 1) Закрыли Codex на машине A
+# 2) Дождались синхронизации облака
+# 3) Запустили sync на машине B
+# Проверки облачного клиента и свободного места НЕ выполняются утилитой.
+strict_handoff_required = true
+cloud_readiness_is_user_responsibility = true
+cloud_capacity_is_user_responsibility = true

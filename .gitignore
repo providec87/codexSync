@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE / editor files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local runtime data (never commit)
+logs/
+backups/
+sync/
+state/
+.tmp/
+.tmp-tests/
+test-sandbox/
+test-write-probe/
+
+# Local machine-specific configs (keep only example template)
+config.toml
+config2.toml
+config.local.toml
+
+# Russian localized markdown docs
+*.ru.md

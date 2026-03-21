@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codexsync"
-version = "0.1.1"
+version = "0.1.2"
 description = "Local-first Codex state sync utility"
 readme = "README.MD"
 requires-python = ">=3.11"
@@ -29,9 +29,9 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/krox24/codexSync"
-Repository = "https://github.com/krox24/codexSync"
-Issues = "https://github.com/krox24/codexSync/issues"
+Homepage = "https://github.com/kroxiksut/codexSync"
+Repository = "https://github.com/kroxiksut/codexSync"
+Issues = "https://github.com/kroxiksut/codexSync/issues"
 
 [project.scripts]
 codexsync = "codexsync.cli:main"

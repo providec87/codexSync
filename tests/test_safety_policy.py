@@ -58,6 +58,23 @@ def _build_cfg() -> AppConfig:
 
 class SafetyPolicyTests(unittest.TestCase):
     @patch("codexsync.app.sys.platform", "win32")
+    @patch("codexsync.app.confirm_process_termination", return_value=True)
+    def test_manual_confirmation_enabled_by_default_prompts(self, confirm_mock) -> None:
+        cfg = _build_cfg()
+        cfg.process_detection.manual_terminate_confirmation = True
+        detector = _DetectorStub()
+        main = [ProcessInfo(pid=10, name="Codex.exe")]
+        snapshot = ProcessSnapshot(
+            main_processes=main,
+            subprocesses=[],
+            sandbox_detected=False,
+        )
+
+        _handle_running_codex(cfg, detector, snapshot, manual_override=None)
+        self.assertEqual(detector.terminated, [main])
+        confirm_mock.assert_called_once()
+
+    @patch("codexsync.app.sys.platform", "win32")
     def test_sandbox_detected_blocks_without_terminate(self) -> None:
         cfg = _build_cfg()
         detector = _DetectorStub()
@@ -83,6 +100,58 @@ class SafetyPolicyTests(unittest.TestCase):
         )
         _handle_running_codex(cfg, detector, snapshot, manual_override=None)
         self.assertEqual(detector.terminated, [main])
+        _confirm_mock.assert_called_once()
+
+    @patch("codexsync.app.sys.platform", "win32")
+    @patch("codexsync.app.confirm_process_termination", return_value=True)
+    def test_manual_confirmation_disabled_in_config_skips_prompt(self, confirm_mock) -> None:
+        cfg = _build_cfg()
+        cfg.process_detection.manual_terminate_confirmation = False
+        detector = _DetectorStub()
+        main = [ProcessInfo(pid=10, name="Codex.exe")]
+        snapshot = ProcessSnapshot(
+            main_processes=main,
+            subprocesses=[],
+            sandbox_detected=False,
+        )
+
+        _handle_running_codex(cfg, detector, snapshot, manual_override=None)
+        self.assertEqual(detector.terminated, [main])
+        confirm_mock.assert_not_called()
+
+    @patch("codexsync.app.sys.platform", "win32")
+    @patch("codexsync.app.confirm_process_termination", return_value=True)
+    def test_override_true_forces_prompt_even_if_config_disabled(self, confirm_mock) -> None:
+        cfg = _build_cfg()
+        cfg.process_detection.manual_terminate_confirmation = False
+        detector = _DetectorStub()
+        main = [ProcessInfo(pid=10, name="Codex.exe")]
+        snapshot = ProcessSnapshot(
+            main_processes=main,
+            subprocesses=[],
+            sandbox_detected=False,
+        )
+
+        _handle_running_codex(cfg, detector, snapshot, manual_override=True)
+        self.assertEqual(detector.terminated, [main])
+        confirm_mock.assert_called_once()
+
+    @patch("codexsync.app.sys.platform", "win32")
+    @patch("codexsync.app.confirm_process_termination", return_value=True)
+    def test_override_false_skips_prompt_even_if_config_enabled(self, confirm_mock) -> None:
+        cfg = _build_cfg()
+        cfg.process_detection.manual_terminate_confirmation = True
+        detector = _DetectorStub()
+        main = [ProcessInfo(pid=10, name="Codex.exe")]
+        snapshot = ProcessSnapshot(
+            main_processes=main,
+            subprocesses=[],
+            sandbox_detected=False,
+        )
+
+        _handle_running_codex(cfg, detector, snapshot, manual_override=False)
+        self.assertEqual(detector.terminated, [main])
+        confirm_mock.assert_not_called()
 
     @patch("codexsync.app.sys.platform", "win32")
     @patch("codexsync.app.confirm_process_termination", return_value=True)

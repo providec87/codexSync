@@ -326,19 +326,32 @@ def _handle_running_codex(
     if not cfg.process_detection.allow_terminate_if_running:
         raise SafetyPreconditionError("Codex process is running and termination is disabled by config.")
 
-    details = ", ".join(f"{proc.name}:{proc.pid}" for proc in snapshot.main_processes)
-    approved = confirm_process_termination(
-        "Codex main process is still running, but codex-windows-sandbox is not detected.\n\n"
-        f"Detected main processes: {details}\n\n"
-        "Terminate Codex processes now and continue sync?",
-        mode=cfg.process_detection.terminate_confirmation_mode,
+    require_manual_confirmation = _resolve_manual_terminate_confirmation(
+        manual_override=manual_override,
+        cfg=cfg,
     )
-    if not approved:
-        raise SafetyPreconditionError("User rejected Codex process termination.")
+    details = ", ".join(f"{proc.name}:{proc.pid}" for proc in snapshot.main_processes)
+    if require_manual_confirmation:
+        approved = confirm_process_termination(
+            "Codex main process is still running, but codex-windows-sandbox is not detected.\n\n"
+            f"Detected main processes: {details}\n\n"
+            "Terminate Codex processes now and continue sync?",
+            mode=cfg.process_detection.terminate_confirmation_mode,
+        )
+        if not approved:
+            raise SafetyPreconditionError("User rejected Codex process termination.")
+    else:
+        LOG.info("Manual termination confirmation disabled; terminating Codex process automatically.")
 
     terminated = detector.terminate(snapshot.main_processes, timeout_seconds=cfg.process_detection.terminate_timeout_seconds)
     if not terminated:
         raise FailSafeError("Failed to terminate Codex processes before timeout.")
+
+
+def _resolve_manual_terminate_confirmation(manual_override: bool | None, cfg: AppConfig) -> bool:
+    if manual_override is not None:
+        return manual_override
+    return bool(cfg.process_detection.manual_terminate_confirmation)
 
 
 def _current_os_background_processes(cfg: AppConfig) -> list[str]:

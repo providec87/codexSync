@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "plan":
             ctx = build_context(
                 config_path,
-                manual_terminate_confirmation_override=args.manual_terminate_confirmation,
+                manual_terminate_confirmation_override=(True if args.manual_terminate_confirmation else None),
                 enforce_safety=False,
             )
             print_plan(ctx.plan)
@@ -100,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "sync":
             ctx = build_context(
                 config_path,
-                manual_terminate_confirmation_override=args.manual_terminate_confirmation,
+                manual_terminate_confirmation_override=(True if args.manual_terminate_confirmation else None),
                 enforce_safety=True,
             )
             dry_run = ctx.config.sync.dry_run_default
@@ -124,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
                 snapshot_name=args.snapshot,
                 target=args.target,
                 dry_run=dry_run,
-                manual_terminate_confirmation_override=args.manual_terminate_confirmation,
+                manual_terminate_confirmation_override=(True if args.manual_terminate_confirmation else None),
             )
             mode = "Dry-run" if dry_run else "Restore"
             print(

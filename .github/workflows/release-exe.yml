@@ -1,9 +1,6 @@
 name: Release EXE
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -11,19 +8,22 @@ on:
         required: true
         default: "v0.1.2"
         type: string
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
   build-windows-exe:
-    name: Build and publish Windows exe
+    name: Build and publish Windows EXE
     runs-on: windows-latest
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref_name }}
 
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref }}
@@ -33,12 +33,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
 
-      - name: Build onefile exe
+      - name: Build EXE
         shell: powershell
         run: |
           if (Test-Path "codexsync.spec") {
@@ -54,16 +54,16 @@ if __name__ == "__main__":
             pyinstaller --clean --noconfirm --onefile --name codexsync --paths src --add-data "src/codexsync/config.example.toml;codexsync" .github/pyinstaller_entrypoint.py
           }
 
-      - name: Prepare release assets
+      - name: Pack release assets
         shell: powershell
         run: |
           $version = "${{ env.RELEASE_TAG }}"
-          $zipName = "codexsync-${version}-windows-amd64.zip"
+          $zipName = "codexsync-$version-windows-amd64.zip"
           Compress-Archive -Path "dist/codexsync.exe" -DestinationPath "dist/$zipName" -Force
           $hash = (Get-FileHash "dist/$zipName" -Algorithm SHA256).Hash.ToLower()
           "$hash  $zipName" | Out-File -FilePath "dist/$zipName.sha256" -Encoding ascii
 
-      - name: Upload workflow artifacts
+      - name: Upload run artifacts
         uses: actions/upload-artifact@v4
         with:
           name: codexsync-windows-exe-${{ env.RELEASE_TAG }}
@@ -71,11 +71,11 @@ if __name__ == "__main__":
             dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip
             dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip.sha256
 
-      - name: Publish GitHub release assets
+      - name: Attach assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
           files: |
             dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip
             dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip.sha256
-          generate_release_notes: true

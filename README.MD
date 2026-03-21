@@ -196,6 +196,58 @@ Important: per OpenAI licensing constraints, authentication tokens are not trans
 
 The project intentionally does not verify cloud-provider sync status, cloud client process state, or free space on cloud/network storage. These are user responsibilities.
 
+## Scheduler setup scripts
+
+This repository includes editable scheduler setup templates:
+
+- Windows Task Scheduler:
+  - `scripts/scheduler/windows/task.config.ps1`
+  - `scripts/scheduler/windows/install-task.ps1`
+  - `scripts/scheduler/windows/remove-task.ps1`
+  - detailed guide: [scripts/scheduler/windows/README.MD](./scripts/scheduler/windows/README.MD)
+- macOS launchd (LaunchAgent):
+  - `scripts/scheduler/macos/launchd.config.sh`
+  - `scripts/scheduler/macos/install-launchd.sh`
+  - `scripts/scheduler/macos/uninstall-launchd.sh`
+  - detailed guide: [scripts/scheduler/macos/README.MD](./scripts/scheduler/macos/README.MD)
+
+Windows install:
+
+```powershell
+cd scripts/scheduler/windows
+# 1) Edit task.config.ps1
+.\install-task.ps1
+```
+
+Windows remove:
+
+```powershell
+cd scripts/scheduler/windows
+.\remove-task.ps1
+```
+
+macOS install:
+
+```bash
+cd scripts/scheduler/macos
+# 1) Edit launchd.config.sh
+chmod +x install-launchd.sh uninstall-launchd.sh run-codexsync.sh
+./install-launchd.sh
+```
+
+macOS remove:
+
+```bash
+cd scripts/scheduler/macos
+./uninstall-launchd.sh
+```
+
+Important:
+
+- These scripts only register scheduled jobs, not OS services.
+- Keep `MODE="dry-run"` while validating behavior; switch to `apply` only when ready.
+- Cold sync protocol still applies: codexSync must run only when Codex is not running.
+
 ## Status
 
 MVP (ready for public repository and community testing)

@@ -39,7 +39,20 @@ jobs:
           pip install pyinstaller
 
       - name: Build onefile exe
-        run: pyinstaller --clean --noconfirm codexsync.spec
+        shell: powershell
+        run: |
+          if (Test-Path "codexsync.spec") {
+            pyinstaller --clean --noconfirm codexsync.spec
+          } else {
+            @'
+from codexsync.cli import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+'@ | Out-File -FilePath ".github\pyinstaller_entrypoint.py" -Encoding ascii
+
+            pyinstaller --clean --noconfirm --onefile --name codexsync --paths src --add-data "src/codexsync/config.example.toml;codexsync" .github/pyinstaller_entrypoint.py
+          }
 
       - name: Prepare release assets
         shell: powershell

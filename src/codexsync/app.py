@@ -3,11 +3,14 @@ from __future__ import annotations
 import logging
 import os
 import platform
+import shutil
 import sys
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+import zipfile
 
 from .backup import BackupManager
 from .config import load_config
@@ -108,6 +111,7 @@ def run_sync(ctx: AppContext, dry_run: bool) -> None:
         machine_id=ctx.config.identity.machine_id or platform.node(),
         retention_days=ctx.config.backup.retention_days,
         max_backups=ctx.config.backup.max_backups,
+        compression=ctx.config.backup.compression,
     )
     engine = SyncEngine(
         backup_manager=mgr,
@@ -135,14 +139,21 @@ def restore_from_backup(
     _enforce_safety_preconditions(cfg, manual_terminate_confirmation_override)
 
     target_root = _resolve_restore_target(cfg, target)
-    snapshot_dir = _resolve_snapshot_dir(cfg.paths.backup_dir, snapshot_name)
-    plan = _build_restore_plan(snapshot_dir, target_root, cfg.targets.include_roots, cfg.filters.exclude_globs)
+    snapshot = _resolve_snapshot_dir(cfg.paths.backup_dir, snapshot_name)
+    plan, extracted_snapshot_dir = _build_restore_plan_from_snapshot(
+        snapshot=snapshot,
+        target_root=target_root,
+        include_roots=cfg.targets.include_roots,
+        exclude_globs=cfg.filters.exclude_globs,
+        temp_root=cfg.paths.temp_dir,
+    )
 
     mgr = BackupManager(
         backup_root=cfg.paths.backup_dir,
         machine_id=cfg.identity.machine_id or platform.node(),
         retention_days=cfg.backup.retention_days,
         max_backups=cfg.backup.max_backups,
+        compression=cfg.backup.compression,
     )
     engine = SyncEngine(
         backup_manager=mgr,
@@ -150,10 +161,14 @@ def restore_from_backup(
         backup_before_overwrite=cfg.backup.backup_before_overwrite,
         fail_on_unknown=cfg.safety.fail_on_unknown,
     )
-    engine.execute(plan, dry_run=dry_run)
+    try:
+        engine.execute(plan, dry_run=dry_run)
+    finally:
+        if extracted_snapshot_dir is not None:
+            shutil.rmtree(extracted_snapshot_dir, ignore_errors=True)
 
     return RestoreResult(
-        snapshot_name=snapshot_dir.name,
+        snapshot_name=snapshot.name,
         target=target,
         restored_files=plan.action_count,
     )
@@ -440,15 +455,74 @@ def _resolve_restore_target(cfg: AppConfig, target: str) -> Path:
 def _resolve_snapshot_dir(backup_root: Path, snapshot_name: str | None) -> Path:
     if snapshot_name:
         snapshot = (backup_root / snapshot_name).resolve()
-        if not snapshot.exists() or not snapshot.is_dir():
-            raise ConfigError(f"Backup snapshot not found: {snapshot_name}")
-        return snapshot
+        if snapshot.exists() and _is_supported_snapshot(snapshot):
+            return snapshot
+        if snapshot.suffix.lower() != ".zip":
+            zip_candidate = (backup_root / f"{snapshot_name}.zip").resolve()
+            if zip_candidate.exists() and _is_supported_snapshot(zip_candidate):
+                return zip_candidate
+        raise ConfigError(f"Backup snapshot not found: {snapshot_name}")
 
-    snapshots = [p for p in backup_root.iterdir() if p.is_dir()] if backup_root.exists() else []
+    snapshots = [p for p in backup_root.iterdir() if _is_supported_snapshot(p)] if backup_root.exists() else []
     if not snapshots:
         raise ConfigError(f"No backup snapshots found in: {backup_root}")
     snapshots.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return snapshots[0]
+
+
+def _is_supported_snapshot(path: Path) -> bool:
+    return path.is_dir() or (path.is_file() and path.suffix.lower() == ".zip")
+
+
+def _build_restore_plan_from_snapshot(
+    snapshot: Path,
+    target_root: Path,
+    include_roots: list[str],
+    exclude_globs: list[str],
+    temp_root: Path,
+) -> tuple[SyncPlan, Path | None]:
+    if snapshot.is_dir():
+        return _build_restore_plan(snapshot, target_root, include_roots, exclude_globs), None
+    if snapshot.is_file() and snapshot.suffix.lower() == ".zip":
+        return _build_restore_plan_from_zip_snapshot(
+            snapshot_zip=snapshot,
+            target_root=target_root,
+            include_roots=include_roots,
+            exclude_globs=exclude_globs,
+            temp_root=temp_root,
+        )
+    raise ConfigError(f"Unsupported backup snapshot format: {snapshot}")
+
+
+def _build_restore_plan_from_zip_snapshot(
+    snapshot_zip: Path,
+    target_root: Path,
+    include_roots: list[str],
+    exclude_globs: list[str],
+    temp_root: Path,
+) -> tuple[SyncPlan, Path]:
+    _ = temp_root
+    path_filter = PathFilter(exclude_globs)
+    allowed_roots = [root.strip("/\\") for root in include_roots if root.strip("/\\")]
+    staging_dir = target_root / f".codexsync-restore-{uuid.uuid4().hex}"
+    staging_dir.mkdir(parents=True, exist_ok=True)
+
+    actions: list[CopyAction] = []
+    with zipfile.ZipFile(snapshot_zip, mode="r") as zf:
+        for entry in zf.infolist():
+            if entry.is_dir():
+                continue
+            rel = entry.filename.replace("\\", "/").strip("/\\")
+            if not _is_included_root(rel, allowed_roots):
+                continue
+            if path_filter.is_excluded(rel):
+                continue
+            staged = staging_dir / f"{uuid.uuid4().hex}.bin"
+            with zf.open(entry, "r") as src, staged.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+            dst_path = target_root / Path(rel.replace("/", os.sep))
+            actions.append(CopyAction(src=staged, dst=dst_path, relative_path=rel))
+    return SyncPlan(to_local=actions, to_cloud=[]), staging_dir
 
 
 def _build_restore_plan(

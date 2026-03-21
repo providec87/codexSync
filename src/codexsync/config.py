@@ -151,7 +151,7 @@ def load_config(path: Path) -> AppConfig:
         backup_before_overwrite=bool(backup_raw.get("backup_before_overwrite", True)),
         retention_days=int(backup_raw.get("retention_days", 30)),
         max_backups=int(backup_raw.get("max_backups", 0)),
-        compression=backup_raw.get("compression", "none"),
+        compression=str(backup_raw.get("compression", "none")).strip().lower(),
     )
 
     filters = FiltersConfig(exclude_globs=list(filters_raw.get("exclude_globs", [])))
@@ -234,8 +234,8 @@ def _validate_config(cfg: AppConfig) -> None:
             "conflict.policy must be one of: manual_abort, prefer_cloud, prefer_local, prefer_newer_mtime"
         )
 
-    if cfg.backup.compression not in {"none"}:
-        raise ConfigError("Only backup.compression=none is supported")
+    if cfg.backup.compression not in {"none", "zip"}:
+        raise ConfigError("backup.compression must be one of: none, zip")
 
     if not cfg.process_detection.process_names:
         raise ConfigError("process_detection.process_names must not be empty")

@@ -30,10 +30,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Verbose logging (includes tracked process snapshot)",
     )
-    parser.add_argument(
+    terminate_mode = parser.add_mutually_exclusive_group()
+    terminate_mode.add_argument(
         "--manual-terminate-confirmation",
-        action="store_true",
+        dest="manual_terminate_confirmation_override",
+        action="store_const",
+        const=True,
         help="Force GUI/user confirmation before terminating Codex processes",
+    )
+    terminate_mode.add_argument(
+        "--auto-terminate-without-confirmation",
+        dest="manual_terminate_confirmation_override",
+        action="store_const",
+        const=False,
+        help="Auto-terminate Codex process without manual confirmation for this run only",
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
@@ -91,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "plan":
             ctx = build_context(
                 config_path,
-                manual_terminate_confirmation_override=(True if args.manual_terminate_confirmation else None),
+                manual_terminate_confirmation_override=args.manual_terminate_confirmation_override,
                 enforce_safety=False,
             )
             print_plan(ctx.plan)
@@ -100,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "sync":
             ctx = build_context(
                 config_path,
-                manual_terminate_confirmation_override=(True if args.manual_terminate_confirmation else None),
+                manual_terminate_confirmation_override=args.manual_terminate_confirmation_override,
                 enforce_safety=True,
             )
             dry_run = ctx.config.sync.dry_run_default
@@ -124,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
                 snapshot_name=args.snapshot,
                 target=args.target,
                 dry_run=dry_run,
-                manual_terminate_confirmation_override=(True if args.manual_terminate_confirmation else None),
+                manual_terminate_confirmation_override=args.manual_terminate_confirmation_override,
             )
             mode = "Dry-run" if dry_run else "Restore"
             print(

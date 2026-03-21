@@ -219,6 +219,38 @@ class ConfigTests(unittest.TestCase):
         finally:
             shutil.rmtree(root, ignore_errors=True)
 
+    def test_backup_compression_zip_is_supported(self) -> None:
+        root = Path.cwd() / "test-sandbox" / f"config-backup-zip-{uuid.uuid4().hex}"
+        root.mkdir(parents=True, exist_ok=False)
+        try:
+            cfg_path = root / "config.toml"
+            cfg_path.write_text(
+                textwrap.dedent(
+                    """
+                    [sync]
+                    mode = "cold"
+                    direction = "bidirectional"
+                    compare = "mtime"
+                    delete_policy = "never"
+
+                    [paths]
+                    cloud_root_dir = "sync"
+                    backup_dir = "backups"
+                    temp_dir = ".tmp"
+
+                    [backup]
+                    compression = "zip"
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            cfg = load_config(cfg_path)
+            self.assertEqual(cfg.backup.compression, "zip")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

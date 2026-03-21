@@ -64,6 +64,13 @@ Developers may want to continue working with Codex on another machine without lo
   - supported layouts: `sessions/YYYY-MM-DD/...` and `sessions/YYYY/MM/DD/...`
   - if no date-based layout is detected, codexSync logs a warning and syncs all `sessions` files
 
+## Backups
+
+- `backup.compression` supports:
+  - `none` (default): backup snapshot is stored as directory tree
+  - `zip`: backup snapshot is stored as a single `.zip` file
+- `restore` supports both snapshot formats and auto-selects the latest by mtime if `--from` is omitted.
+
 ## Logging
 
 - Levels: `DEBUG|INFO|WARNING|ERROR`
@@ -141,6 +148,12 @@ Restore from specific backup snapshot:
 python -m codexsync -c config.toml restore --from <snapshot_dir_name> --apply
 ```
 
+Restore from specific zip snapshot:
+
+```powershell
+python -m codexsync -c config.toml restore --from <snapshot_name.zip> --apply
+```
+
 Restore to cloud target instead of local:
 
 ```powershell
@@ -175,6 +188,12 @@ Process termination behavior:
 
 ```powershell
 python -m codexsync -c config.toml --manual-terminate-confirmation sync --apply
+```
+
+- You can force auto-terminate without manual confirmation for the current run only:
+
+```powershell
+python -m codexsync -c config.toml --auto-terminate-without-confirmation sync --apply
 ```
 
 - On macOS/Linux, previous behavior is kept: running Codex process fails safety precondition.

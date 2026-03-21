@@ -32,6 +32,14 @@ class CliManualConfirmationTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(build_ctx.call_args.kwargs["manual_terminate_confirmation_override"], True)
 
+    @patch("codexsync.cli.run_sync")
+    @patch("codexsync.cli.build_context", return_value=_ctx())
+    @patch("codexsync.cli.load_config", side_effect=ConfigError("skip verbose config load"))
+    def test_sync_with_auto_terminate_flag_passes_false_override(self, _load_cfg, build_ctx, _run_sync) -> None:
+        code = main(["-c", "config.toml", "--auto-terminate-without-confirmation", "sync", "--dry-run"])
+        self.assertEqual(code, 0)
+        self.assertEqual(build_ctx.call_args.kwargs["manual_terminate_confirmation_override"], False)
+
 
 if __name__ == "__main__":
     unittest.main()

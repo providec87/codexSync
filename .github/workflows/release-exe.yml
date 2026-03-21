@@ -5,6 +5,12 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag to build and publish (for example v0.1.2)"
+        required: true
+        default: "v0.1.2"
+        type: string
 
 permissions:
   contents: write
@@ -13,10 +19,14 @@ jobs:
   build-windows-exe:
     name: Build and publish Windows exe
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref_name }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,7 +44,7 @@ jobs:
       - name: Prepare release assets
         shell: powershell
         run: |
-          $version = "${{ github.ref_name }}"
+          $version = "${{ env.RELEASE_TAG }}"
           $zipName = "codexsync-${version}-windows-amd64.zip"
           Compress-Archive -Path "dist/codexsync.exe" -DestinationPath "dist/$zipName" -Force
           $hash = (Get-FileHash "dist/$zipName" -Algorithm SHA256).Hash.ToLower()
@@ -43,15 +53,16 @@ jobs:
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: codexsync-windows-exe-${{ github.ref_name }}
+          name: codexsync-windows-exe-${{ env.RELEASE_TAG }}
           path: |
-            dist/codexsync-${{ github.ref_name }}-windows-amd64.zip
-            dist/codexsync-${{ github.ref_name }}-windows-amd64.zip.sha256
+            dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip
+            dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip.sha256
 
       - name: Publish GitHub release assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
-            dist/codexsync-${{ github.ref_name }}-windows-amd64.zip
-            dist/codexsync-${{ github.ref_name }}-windows-amd64.zip.sha256
+            dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip
+            dist/codexsync-${{ env.RELEASE_TAG }}-windows-amd64.zip.sha256
           generate_release_notes: true

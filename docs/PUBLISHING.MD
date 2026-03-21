@@ -61,7 +61,9 @@ dist\codexsync.exe -h
 ### GitHub automatic release assets
 
 - Workflow: `.github/workflows/release-exe.yml`
-- Trigger: push tag `v*` (for example `v0.1.2`)
+- Trigger:
+  - push tag `v*` (for example `v0.1.3`)
+  - manual `workflow_dispatch` with input `release_tag` (for existing tag, for example `v0.1.2`)
 - Output assets:
   - `codexsync-<tag>-windows-amd64.zip`
   - `codexsync-<tag>-windows-amd64.zip.sha256`

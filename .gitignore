@@ -35,6 +35,8 @@ backups/
 sync/
 state/
 .tmp/
+.tmp-build/
+.codex-tmp/
 .tmp-tests/
 test-sandbox/
 test-write-probe/

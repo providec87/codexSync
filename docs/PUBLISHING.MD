@@ -46,3 +46,29 @@ git push -u origin main
 2. Confirm CI workflow `CI` is running in `Actions` for both `windows-latest` and `macos-latest`.
 3. Confirm README renders correctly.
 4. Confirm no local/private files were uploaded.
+
+## 6. Build and publish Windows `.exe`
+
+### Local build smoke test
+
+```powershell
+python -m pip install --upgrade pip
+pip install pyinstaller
+pyinstaller --clean --noconfirm codexsync.spec
+dist\codexsync.exe -h
+```
+
+### GitHub automatic release assets
+
+- Workflow: `.github/workflows/release-exe.yml`
+- Trigger: push tag `v*` (for example `v0.1.2`)
+- Output assets:
+  - `codexsync-<tag>-windows-amd64.zip`
+  - `codexsync-<tag>-windows-amd64.zip.sha256`
+
+Create and push release tag:
+
+```powershell
+git tag v0.1.2
+git push origin v0.1.2
+```

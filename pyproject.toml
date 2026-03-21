@@ -9,7 +9,29 @@ description = "Local-first Codex state sync utility"
 readme = "README.MD"
 requires-python = ">=3.11"
 authors = [{ name = "codexSync contributors" }]
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+keywords = ["codex", "sync", "backup", "cli", "local-first"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Version Control",
+  "Topic :: Utilities",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/krox24/codexSync"
+Repository = "https://github.com/krox24/codexSync"
+Issues = "https://github.com/krox24/codexSync/issues"
 
 [project.scripts]
 codexsync = "codexsync.cli:main"

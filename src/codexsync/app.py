@@ -71,6 +71,7 @@ def build_context(
         local_root=local_dir,
         cloud_root=cloud_dir,
         previous_manifest=manifest,
+        compare_mode=cfg.sync.compare,
         tolerance_seconds=cfg.sync.time_tolerance_seconds,
         conflict_policy=cfg.conflict.policy,
         equal_mtime_action=cfg.sync.equal_mtime_action,

@@ -287,6 +287,34 @@ class ConfigTests(unittest.TestCase):
         finally:
             shutil.rmtree(root, ignore_errors=True)
 
+    def test_compare_mtime_hash_fallback_is_supported(self) -> None:
+        root = Path.cwd() / "test-sandbox" / f"config-compare-{uuid.uuid4().hex}"
+        root.mkdir(parents=True, exist_ok=False)
+        try:
+            cfg_path = root / "config.toml"
+            cfg_path.write_text(
+                textwrap.dedent(
+                    """
+                    [sync]
+                    mode = "cold"
+                    direction = "bidirectional"
+                    compare = "MTIME_HASH_FALLBACK"
+                    delete_policy = "never"
+
+                    [paths]
+                    cloud_root_dir = "sync"
+                    backup_dir = "backups"
+                    temp_dir = ".tmp"
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            cfg = load_config(cfg_path)
+            self.assertEqual(cfg.sync.compare, "mtime_hash_fallback")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
     def test_invalid_logging_archive_mode_fails(self) -> None:
         root = Path.cwd() / "test-sandbox" / f"config-log-archive-{uuid.uuid4().hex}"
         root.mkdir(parents=True, exist_ok=False)

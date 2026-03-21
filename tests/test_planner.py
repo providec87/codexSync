@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 import unittest
+import uuid
 
 from codexsync.models import FileMeta, ManifestEntry, SnapshotFingerprint, SyncManifest
 from codexsync.planner import build_sync_plan
@@ -222,6 +224,44 @@ class PlannerTests(unittest.TestCase):
 
         self.assertEqual(plan.action_count, 0)
         self.assertEqual(plan.conflicts, [rel])
+
+    def test_mtime_hash_fallback_detects_content_difference(self) -> None:
+        root = Path.cwd() / "test-sandbox" / f"planner-hash-{uuid.uuid4().hex}"
+        root.mkdir(parents=True, exist_ok=False)
+        try:
+            rel = "sessions/a.json"
+            local_file = root / "local-a.json"
+            cloud_file = root / "cloud-a.json"
+            local_file.write_text("A", encoding="utf-8")
+            cloud_file.write_text("B", encoding="utf-8")
+
+            local_meta = FileMeta(relative_path=rel, abs_path=local_file, mtime_ns=100, size=1)
+            cloud_meta = FileMeta(relative_path=rel, abs_path=cloud_file, mtime_ns=100, size=1)
+            local_index = {rel: local_meta}
+            cloud_index = {rel: cloud_meta}
+
+            plan_mtime = build_sync_plan(
+                local_index=local_index,
+                cloud_index=cloud_index,
+                local_root=Path("/local"),
+                cloud_root=Path("/cloud"),
+                compare_mode="mtime",
+            )
+            self.assertEqual(plan_mtime.action_count, 0)
+            self.assertEqual(plan_mtime.conflicts, [])
+
+            plan_fallback = build_sync_plan(
+                local_index=local_index,
+                cloud_index=cloud_index,
+                local_root=Path("/local"),
+                cloud_root=Path("/cloud"),
+                compare_mode="mtime_hash_fallback",
+                equal_mtime_action="manual_abort",
+            )
+            self.assertEqual(plan_fallback.action_count, 0)
+            self.assertEqual(plan_fallback.conflicts, [rel])
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
 
 
 if __name__ == "__main__":

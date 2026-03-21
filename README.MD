@@ -50,6 +50,11 @@ Developers may want to continue working with Codex on another machine without lo
 
 ## Sync options
 
+`sync.compare` controls file comparison strategy:
+
+- `mtime` (default): compare by `size + mtime`
+- `mtime_hash_fallback`: fast `size + mtime` path, but when values are equal/close (within tolerance), compare file content hash (SHA-256)
+
 `sync.equal_mtime_action` controls behavior when file mtimes are equal (within `sync.time_tolerance_seconds`) but files differ:
 
 - `skip`: do not copy (default)

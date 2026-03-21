@@ -10,7 +10,8 @@ machine_id = "machine-a"
 mode = "cold"
 # Direction: bidirectional sync based on mtime
 direction = "bidirectional"
-# Comparison algorithm
+# Comparison algorithm: mtime|mtime_hash_fallback
+# mtime_hash_fallback compares SHA-256 when size+mtime are equal/close
 compare = "mtime"
 # Time tolerance (seconds) to smooth small filesystem timestamp differences
 time_tolerance_seconds = 0

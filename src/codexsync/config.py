@@ -119,7 +119,7 @@ def load_config(path: Path) -> AppConfig:
     sync = SyncConfig(
         mode=sync_raw.get("mode", "cold"),
         direction=sync_raw.get("direction", "bidirectional"),
-        compare=sync_raw.get("compare", "mtime"),
+        compare=str(sync_raw.get("compare", "mtime")).strip().lower(),
         time_tolerance_seconds=int(sync_raw.get("time_tolerance_seconds", 0)),
         equal_mtime_action=str(sync_raw.get("equal_mtime_action", "skip")).strip().lower(),
         dry_run_default=bool(sync_raw.get("dry_run_default", True)),
@@ -209,8 +209,8 @@ def _validate_config(cfg: AppConfig) -> None:
     if cfg.sync.mode != "cold":
         raise ConfigError("Only cold sync mode is supported")
 
-    if cfg.sync.compare != "mtime":
-        raise ConfigError("Only compare=mtime is supported")
+    if cfg.sync.compare not in {"mtime", "mtime_hash_fallback"}:
+        raise ConfigError("sync.compare must be one of: mtime, mtime_hash_fallback")
 
     if cfg.sync.direction != "bidirectional":
         raise ConfigError("Only bidirectional sync direction is supported")

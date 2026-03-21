@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from .models import CopyAction, FileMeta, SnapshotFingerprint, SyncManifest, SyncPlan
@@ -11,6 +12,7 @@ def build_sync_plan(
     local_root: Path,
     cloud_root: Path,
     previous_manifest: SyncManifest | None = None,
+    compare_mode: str = "mtime",
     tolerance_seconds: int = 0,
     conflict_policy: str = "manual_abort",
     equal_mtime_action: str = "skip",
@@ -39,7 +41,7 @@ def build_sync_plan(
         if not local_meta or not cloud_meta:
             continue
 
-        if _same_file(local_meta, cloud_meta, tolerance_ns):
+        if _same_file(local_meta, cloud_meta, tolerance_ns, compare_mode):
             continue
 
         if prev_entry:
@@ -136,10 +138,15 @@ def _resolve_equal_mtime(
     return False
 
 
-def _same_file(local_meta: FileMeta, cloud_meta: FileMeta, tolerance_ns: int) -> bool:
+def _same_file(local_meta: FileMeta, cloud_meta: FileMeta, tolerance_ns: int, compare_mode: str) -> bool:
     if local_meta.size != cloud_meta.size:
         return False
-    return abs(local_meta.mtime_ns - cloud_meta.mtime_ns) <= tolerance_ns
+    mtime_close = abs(local_meta.mtime_ns - cloud_meta.mtime_ns) <= tolerance_ns
+    if not mtime_close:
+        return False
+    if compare_mode == "mtime_hash_fallback":
+        return _same_content(local_meta.abs_path, cloud_meta.abs_path)
+    return True
 
 
 def _has_side_changed(meta: FileMeta, previous: SnapshotFingerprint | None, tolerance_ns: int) -> bool:
@@ -148,3 +155,15 @@ def _has_side_changed(meta: FileMeta, previous: SnapshotFingerprint | None, tole
     if meta.size != previous.size:
         return True
     return abs(meta.mtime_ns - previous.mtime_ns) > tolerance_ns
+
+
+def _same_content(left: Path, right: Path) -> bool:
+    return _sha256(left) == _sha256(right)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

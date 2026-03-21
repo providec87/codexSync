@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 import unittest
 
 from codexsync.app import collect_process_snapshot
@@ -34,6 +35,7 @@ class _DetectorStub:
 
 
 class ProcessSnapshotTests(unittest.TestCase):
+    @patch("codexsync.app.sys.platform", "win32")
     def test_windows_fallback_detects_enable_sandbox_flag(self) -> None:
         cfg = AppConfig(
             identity=IdentityConfig(machine_id="machine-a"),

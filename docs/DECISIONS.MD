@@ -28,3 +28,7 @@ close Codex on machine A, wait for cloud propagation, then sync on machine B.
 ## D-008: Responsibility boundary for cloud environment
 The utility does not verify cloud client process status or free space in cloud/network storage.
 These checks are out of scope and owned by the user.
+
+## D-009: CI target matrix for MVP
+CI runs on Windows and macOS runners (`windows-latest`, `macos-latest`).
+Linux CI is intentionally disabled for MVP until Linux runtime support is explicitly in scope.

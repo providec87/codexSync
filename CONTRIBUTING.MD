@@ -10,7 +10,7 @@ By submitting a contribution (code, docs, tests, or other material), you agree t
 
 To keep dual licensing possible (`GPL-3.0-or-later` + commercial licenses), contributors must also grant the maintainers the right to relicense their contributions.
 
-Before your first contribution is accepted, you must agree to the terms in [CLA.md](./CLA.md).
+Before your first contribution is accepted, you must agree to the terms in [CLA.MD](./CLA.MD).
 
 ## Contribution Workflow
 
@@ -19,6 +19,13 @@ Before your first contribution is accepted, you must agree to the terms in [CLA.
 3. Keep changes focused and documented.
 4. Add or update tests when behavior changes.
 5. Open a pull request.
+
+## Test and Platform Notes
+
+- Project packaging requires Python `3.11+` (see `pyproject.toml`).
+- CI currently validates on `windows-latest` and `macos-latest`.
+- Linux runtime support is currently out of MVP scope, so Linux CI is intentionally disabled.
+- Markdown naming convention is fixed: use uppercase `.MD` filenames and do not change filename case in future commits.
 
 ## Quality and Safety Expectations
 

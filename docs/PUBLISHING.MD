@@ -2,7 +2,7 @@
 
 ## 1. Pre-publish safety checks
 
-1. Confirm local-only constraints are documented in `AGENTS.md` and `README.md`.
+1. Confirm local-only constraints are documented in `AGENTS.MD` and `README.MD`.
 2. Confirm only `config.example.toml` is tracked (no machine-specific config).
 3. Confirm temp/cache/test runtime folders are ignored by `.gitignore`.
 
@@ -41,6 +41,6 @@ git push -u origin main
 ## 5. Verify after push
 
 1. Open repository on GitHub.
-2. Confirm CI workflow `CI` is running in `Actions`.
+2. Confirm CI workflow `CI` is running in `Actions` for both `windows-latest` and `macos-latest`.
 3. Confirm README renders correctly.
 4. Confirm no local/private files were uploaded.

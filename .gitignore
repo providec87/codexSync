@@ -46,3 +46,4 @@ config.local.toml
 
 # Russian localized markdown docs
 *.ru.md
+*.RU.MD

@@ -1,6 +1,6 @@
 # codexSync
 
-Open-source utility for syncing local Codex state between multiple Windows machines using a cloud-synced folder.
+Open-source utility for syncing local Codex state between personal machines using a cloud-synced folder.
 
 ## Why
 
@@ -53,6 +53,15 @@ Developers may want to continue working with Codex on another machine without lo
 - Levels: `DEBUG|INFO|WARNING|ERROR`
 - Formats (configurable): `text|json|logfmt`
 - Rotation: retention-based, default `7` days
+
+## Platform and CI
+
+- Runtime support is currently Windows-first.
+- macOS support is allowed in current project scope (Apple Silicon target).
+- Linux runtime support is intentionally out of MVP scope for now.
+- CI currently runs on:
+  - `windows-latest`
+  - `macos-latest`
 
 ## CLI commands
 
@@ -154,7 +163,6 @@ python -m codexsync -c config.toml --manual-terminate-confirmation sync --apply
 
 - On macOS/Linux, previous behavior is kept: running Codex process fails safety precondition.
 - `--verbose` works for `plan`, `sync --dry-run`, `sync --apply`, `restore --dry-run`, and `restore --apply`; it logs tracked processes with PID/name.
-- `--verbose` works for `plan`, `sync --dry-run`, `sync --apply`, `restore --dry-run`, and `restore --apply`.
 - In verbose mode on Windows, codexSync logs only:
   - whether `codex.exe` is running,
   - whether `codex-windows-sandbox` is detected,
@@ -194,16 +202,16 @@ MVP (ready for public repository and community testing)
 
 ## Publishing
 
-See release checklist: [docs/PUBLISHING.md](./docs/PUBLISHING.md)
+See release checklist: [docs/PUBLISHING.MD](./docs/PUBLISHING.MD)
 
 ## Licensing
 
 This project uses dual licensing:
 
 - Open-source license: `GPL-3.0-or-later` (see [LICENSE](./LICENSE))
-- Commercial licensing path: see [COMMERCIAL_LICENSE.md](./COMMERCIAL_LICENSE.md)
+- Commercial licensing path: see [COMMERCIAL_LICENSE.MD](./COMMERCIAL_LICENSE.MD)
 
 Contributions are accepted under project contribution terms in:
 
-- [CONTRIBUTING.md](./CONTRIBUTING.md)
-- [CLA.md](./CLA.md)
+- [CONTRIBUTING.MD](./CONTRIBUTING.MD)
+- [CLA.MD](./CLA.MD)

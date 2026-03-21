@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import shutil
 import textwrap
 import unittest
@@ -11,6 +12,25 @@ from codexsync.config import load_config
 
 class ConfigTests(unittest.TestCase):
     def test_workspace_root_substitution(self) -> None:
+        if os.name == "nt":
+            workspace_root = "D:/codexSync"
+            local_state = "C:/Users/user/.codex_test"
+            expected_workspace = str(Path("D:/codexSync"))
+            expected_cloud = str(Path("D:/codexSync/sync"))
+            expected_backup = str(Path("D:/codexSync/backups"))
+            expected_temp = str(Path("D:/codexSync/.tmp"))
+            expected_manifest = str(Path("D:/codexSync/state/manifest.json"))
+            expected_log = str(Path("D:/codexSync/logs/codexsync.log"))
+        else:
+            workspace_root = "/tmp/codexSync"
+            local_state = "/tmp/.codex_test"
+            expected_workspace = str(Path("/tmp/codexSync"))
+            expected_cloud = str(Path("/tmp/codexSync/sync"))
+            expected_backup = str(Path("/tmp/codexSync/backups"))
+            expected_temp = str(Path("/tmp/codexSync/.tmp"))
+            expected_manifest = str(Path("/tmp/codexSync/state/manifest.json"))
+            expected_log = str(Path("/tmp/codexSync/logs/codexsync.log"))
+
         root = Path.cwd() / "test-sandbox" / f"config-{uuid.uuid4().hex}"
         root.mkdir(parents=True, exist_ok=False)
         try:
@@ -28,34 +48,34 @@ class ConfigTests(unittest.TestCase):
                     delete_policy = "never"
 
                     [paths]
-                    workspace_root_dir = "D:/codexSync"
-                    local_state_dir = "C:/Users/user/.codex_test"
-                    cloud_root_dir = "${workspace_root}/sync"
-                    backup_dir = "${workspace_root}/backups"
-                    temp_dir = "${workspace_root}/.tmp"
+                    workspace_root_dir = "{workspace_root}"
+                    local_state_dir = "{local_state}"
+                    cloud_root_dir = "${{workspace_root}}/sync"
+                    backup_dir = "${{workspace_root}}/backups"
+                    temp_dir = "${{workspace_root}}/.tmp"
 
                     [state]
-                    manifest_file = "${workspace_root}/state/manifest.json"
+                    manifest_file = "${{workspace_root}}/state/manifest.json"
                     data_version = 1
 
                     [logging]
-                    file = "${workspace_root}/logs/codexsync.log"
+                    file = "${{workspace_root}}/logs/codexsync.log"
                     format = "text"
                     """
-                ).strip()
+                ).strip().format(workspace_root=workspace_root, local_state=local_state)
                 + "\n",
                 encoding="utf-8",
             )
 
             cfg = load_config(cfg_path)
-            self.assertEqual(str(cfg.paths.workspace_root_dir), "D:\\codexSync")
-            self.assertEqual(str(cfg.paths.cloud_root_dir), "D:\\codexSync\\sync")
-            self.assertEqual(str(cfg.paths.backup_dir), "D:\\codexSync\\backups")
-            self.assertEqual(str(cfg.paths.temp_dir), "D:\\codexSync\\.tmp")
+            self.assertEqual(str(cfg.paths.workspace_root_dir), expected_workspace)
+            self.assertEqual(str(cfg.paths.cloud_root_dir), expected_cloud)
+            self.assertEqual(str(cfg.paths.backup_dir), expected_backup)
+            self.assertEqual(str(cfg.paths.temp_dir), expected_temp)
             assert cfg.state.manifest_file is not None
-            self.assertEqual(str(cfg.state.manifest_file), "D:\\codexSync\\state\\manifest.json")
+            self.assertEqual(str(cfg.state.manifest_file), expected_manifest)
             assert cfg.logging.file is not None
-            self.assertEqual(str(cfg.logging.file), "D:\\codexSync\\logs\\codexsync.log")
+            self.assertEqual(str(cfg.logging.file), expected_log)
         finally:
             shutil.rmtree(root, ignore_errors=True)
 

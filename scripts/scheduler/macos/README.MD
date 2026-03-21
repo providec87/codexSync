@@ -58,6 +58,12 @@ Examples:
 
 ## Install
 
+Before scheduler setup, create a config file from packaged template:
+
+```bash
+python3 -m codexsync init-config --output /Users/<you>/codexSync/config.toml
+```
+
 ```bash
 cd scripts/scheduler/macos
 chmod +x install-launchd.sh uninstall-launchd.sh run-codexsync.sh

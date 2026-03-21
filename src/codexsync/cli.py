@@ -54,6 +54,17 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("doctor", help="Run environment diagnostics before sync")
     sub.add_parser("preflight", help="Run environment diagnostics before sync")
     sub.add_parser("plan", help="Build and print sync plan")
+    init_cfg = sub.add_parser("init-config", help="Write example config.toml file")
+    init_cfg.add_argument(
+        "--output",
+        default="config.toml",
+        help="Output path for generated config file",
+    )
+    init_cfg.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite output file if it already exists",
+    )
 
     sync = sub.add_parser("sync", help="Run synchronization")
     mode_group = sync.add_mutually_exclusive_group()
@@ -100,6 +111,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "validate":
             validate_config_only(config_path)
             print("Config is valid.")
+            return int(ExitCode.OK)
+
+        if args.command == "init-config":
+            output_path = Path(args.output).expanduser()
+            created = init_config_template(output_path=output_path, force=args.force)
+            print(f"Config template written: {created}")
             return int(ExitCode.OK)
 
         if args.command in {"doctor", "preflight"}:
@@ -173,6 +190,18 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # pragma: no cover
         LOG.exception("Unhandled error: %s", exc)
         return int(ExitCode.INTERNAL_ERROR)
+
+
+def init_config_template(output_path: Path, force: bool) -> Path:
+    if output_path.exists() and not force:
+        raise ConfigError(
+            f"File already exists: {output_path}. Use --force to overwrite."
+        )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    template_path = Path(__file__).resolve().with_name("config.example.toml")
+    template = template_path.read_text(encoding="utf-8")
+    output_path.write_text(template, encoding="utf-8")
+    return output_path.resolve()
 
 
 def _emit_verbose_process_snapshot(verbose: bool, cfg: AppConfig) -> None:

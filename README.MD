@@ -2,6 +2,10 @@
 
 Open-source utility for syncing local Codex state between personal machines using a cloud-synced folder.
 
+> [!IMPORTANT]
+> Current real-world validation is Windows-to-Windows only.
+> macOS support exists in code/CI, but end-to-end handoff on real macOS machines is not yet validated.
+
 ## Why
 
 Developers may want to continue working with Codex on another machine without losing local session state.
@@ -104,6 +108,24 @@ Run from project root:
 
 ```powershell
 python -m codexsync -c config.toml <command>
+```
+
+Generate `config.toml` from bundled template:
+
+```powershell
+python -m codexsync init-config
+```
+
+Generate to a custom location:
+
+```powershell
+python -m codexsync init-config --output D:\codexSync\config.toml
+```
+
+Overwrite existing config file:
+
+```powershell
+python -m codexsync init-config --output D:\codexSync\config.toml --force
 ```
 
 Validation:
@@ -314,6 +336,7 @@ MVP (ready for public repository and community testing)
 ## Publishing
 
 See release checklist: [docs/PUBLISHING.MD](./docs/PUBLISHING.MD)
+Release notes: [CHANGELOG.MD](./CHANGELOG.MD)
 
 ## Licensing
 

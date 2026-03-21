@@ -1,0 +1,149 @@
+# codexSync - example configuration
+# All comments in this file are in English.
+
+[identity]
+# Stable machine ID (set manually; do not generate a new random value on each run)
+machine_id = "machine-a"
+
+[sync]
+# Sync mode: cold only (Codex must be closed)
+mode = "cold"
+# Direction: bidirectional sync based on mtime
+direction = "bidirectional"
+# Comparison algorithm: mtime|mtime_hash_fallback
+# mtime_hash_fallback compares SHA-256 when size+mtime are equal/close
+compare = "mtime"
+# Time tolerance (seconds) to smooth small filesystem timestamp differences
+time_tolerance_seconds = 0
+# Action when mtimes are equal (within tolerance):
+# skip|prefer_local|prefer_cloud|manual_abort
+equal_mtime_action = "skip"
+# Do not propagate deletions (safe mode)
+delete_policy = "never"
+# Enable dry-run by default
+dry_run_default = true
+# Session mode:
+# all|last_date_only (latest date folder under sessions/, if date-based layout is detected)
+session_mode = "last_date_only"
+
+[paths]
+# codexSync workspace root (used for variable expansion in other paths)
+workspace_root_dir = "D:/GDrive/codexSync"
+# Local Codex state directory
+local_state_dir = "C:/Users/USERNAME/.codex"
+# Shared cloud/network directory (example path)
+cloud_root_dir = "${workspace_root}/sync"
+# Directory for backups created before overwrite
+backup_dir = "${workspace_root}/backups"
+# Temporary directory for atomic operations (tmp + rename)
+temp_dir = "${workspace_root}/.tmp"
+
+[targets]
+# Relative paths under local_state_dir/cloud_state_dir included in sync
+include_roots = [
+  "sessions",
+  "session_index.jsonl",
+  "skills",
+  "plugins",
+]
+
+[filters]
+# Global exclusions (temporary/cache/lock files, etc.)
+exclude_globs = [
+  "**/*.lock",
+  "**/*.tmp",
+  "**/*.temp",
+  "**/tmp/**",
+  "**/cache/**",
+  "**/.cache/**",
+  "**/__pycache__/**",
+  "**/*.log",
+]
+
+[conflict]
+# Conflict policy:
+# manual_abort|prefer_cloud|prefer_local|prefer_newer_mtime
+policy = "manual_abort"
+# Include conflict file list in report
+report_conflicts = true
+
+[backup]
+# Create backup before any target file overwrite
+backup_before_overwrite = true
+# Backup retention period (days)
+retention_days = 30
+# Maximum number of backup archives/directories (0 = unlimited)
+max_backups = 0
+# Backup compression: none|zip
+compression = "none"
+
+[safety]
+# Never write state while Codex is running
+require_codex_stopped = true
+# On uncertainty, abort with error (safe fail)
+fail_on_unknown = true
+
+[process_detection]
+# Codex process names across operating systems
+process_names = ["codex.exe", "codex"]
+# Small grace delay after process close before sync starts
+grace_period_seconds = 2
+# Allow automatic Codex process termination before sync (Windows only)
+allow_terminate_if_running = true
+# Require manual GUI confirmation before termination by default
+manual_terminate_confirmation = true
+# Confirmation channel: gui|console
+terminate_confirmation_mode = "gui"
+# Timeout waiting for full termination after terminate call (seconds)
+terminate_timeout_seconds = 20
+
+[process_detection.background_process_names]
+# Background processes treated as "Codex is still running"
+windows = ["codex-windows-sandbox"]
+macos = []
+linux = []
+
+[state]
+# Internal coordination files between machines
+manifest_file = "${workspace_root}/state/manifest.json"
+#lease_file = "D:/GDrive/codexSync/lease.json"
+#history_dir = "D:/GDrive/codexSync/history"
+# Lease TTL (seconds): once expired, another machine may take over sync
+#lease_ttl_seconds = 300
+# Internal metadata schema version
+data_version = 1
+
+[scheduler]
+# Enable scheduling (manual run is always available)
+enabled = false
+# Scheduler type: windows_task_scheduler|cron|launchd|systemd
+kind = "windows_task_scheduler"
+# Run interval in minutes
+interval_minutes = 10
+# Random startup jitter (seconds) to reduce simultaneous runs on two machines
+jitter_seconds = 30
+
+[logging]
+# Logging level: DEBUG|INFO|WARNING|ERROR
+level = "INFO"
+# Base log file path template (real files include machine + date suffix)
+# Example real name: codexsync-machine-a-2026-03-21.log
+file = "${workspace_root}/logs/codexsync.log"
+# Log format: text|json|logfmt
+format = "text"
+# Log retention period (days)
+retention_days = 7
+# Archive mode for rotated/old logs: text|zip
+archive_mode = "zip"
+# Maximum size per active text log file (MB)
+max_file_size_mb = 10
+
+[assumptions]
+# IMPORTANT: this defines the project's operational contract.
+# 1) Close Codex on machine A
+# 2) Wait for cloud synchronization to finish
+# 3) Run sync on machine B
+# Cloud client state and free-space checks are NOT performed by this tool.
+strict_handoff_required = true
+cloud_readiness_is_user_responsibility = true
+cloud_capacity_is_user_responsibility = true

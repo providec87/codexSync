@@ -55,6 +55,12 @@ Examples:
 
 ## Install
 
+Before scheduler setup, create a config file from packaged template:
+
+```powershell
+python -m codexsync init-config --output D:\codexSync\config.toml
+```
+
 ```powershell
 cd scripts/scheduler/windows
 # edit task.config.ps1

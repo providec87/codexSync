@@ -183,6 +183,9 @@ def load_config(path: Path) -> AppConfig:
         ),
         format=logging_raw.get("format", "text"),
         retention_days=int(logging_raw.get("retention_days", 7)),
+        archive_mode=str(logging_raw.get("archive_mode", "zip")).strip().lower(),
+        max_file_size_mb=int(logging_raw.get("max_file_size_mb", 10)),
+        machine_id=identity.machine_id,
     )
 
     cfg = AppConfig(
@@ -259,6 +262,15 @@ def _validate_config(cfg: AppConfig) -> None:
 
     if cfg.logging.format.lower() not in {"text", "json", "logfmt"}:
         raise ConfigError("logging.format must be one of: text, json, logfmt")
+
+    if cfg.logging.archive_mode not in {"text", "zip"}:
+        raise ConfigError("logging.archive_mode must be one of: text, zip")
+
+    if cfg.logging.retention_days < 0:
+        raise ConfigError("logging.retention_days must be >= 0")
+
+    if cfg.logging.max_file_size_mb <= 0:
+        raise ConfigError("logging.max_file_size_mb must be > 0")
 
     if cfg.paths.local_state_dir and cfg.paths.local_state_dir == cfg.paths.cloud_root_dir:
         raise ConfigError("paths.local_state_dir and paths.cloud_root_dir must be different")

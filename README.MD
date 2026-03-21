@@ -75,7 +75,14 @@ Developers may want to continue working with Codex on another machine without lo
 
 - Levels: `DEBUG|INFO|WARNING|ERROR`
 - Formats (configurable): `text|json|logfmt`
-- Rotation: retention-based, default `7` days
+- Rotation/size/retention/archive rules apply equally to all formats (`text`, `json`, `logfmt`)
+- UTF-8 for all log files
+- Daily log files with machine id (`<stem>-<machine>-YYYY-MM-DD[.N].log`)
+- Daily/time rotation + size rotation (`logging.max_file_size_mb`, default `10`)
+- Retention cleanup (`logging.retention_days`, default `7`)
+- Old log storage mode (`logging.archive_mode`):
+  - `zip` (default): archive rotated/old logs into `.zip`
+  - `text`: keep rotated logs as plain text files
 
 ## Platform and CI
 

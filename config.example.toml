@@ -125,12 +125,17 @@ jitter_seconds = 30
 [logging]
 # Logging level: DEBUG|INFO|WARNING|ERROR
 level = "INFO"
-# Log file path
+# Base log file path template (real files include machine + date suffix)
+# Example real name: codexsync-machine-a-2026-03-21.log
 file = "${workspace_root}/logs/codexsync.log"
 # Log format: text|json|logfmt
 format = "text"
 # Log retention period (days)
 retention_days = 7
+# Archive mode for rotated/old logs: text|zip
+archive_mode = "zip"
+# Maximum size per active text log file (MB)
+max_file_size_mb = 10
 
 [assumptions]
 # IMPORTANT: this defines the project's operational contract.

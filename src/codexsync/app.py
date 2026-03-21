@@ -195,7 +195,6 @@ def initialize_runtime_paths(cfg: AppConfig) -> None:
 
     if cfg.logging.file:
         _ensure_dir(cfg.logging.file.parent, "logging.file parent")
-        _touch_file(cfg.logging.file, "logging.file")
 
     if cfg.state.manifest_file:
         _ensure_dir(cfg.state.manifest_file.parent, "state.manifest_file parent")
@@ -417,15 +416,6 @@ def _ensure_dir(path: Path, field_name: str) -> None:
         raise ConfigError(f"Cannot create directory for {field_name}: {path}. {exc}") from exc
     if not path.is_dir():
         raise ConfigError(f"Path for {field_name} is not a directory: {path}")
-
-
-def _touch_file(path: Path, field_name: str) -> None:
-    try:
-        path.touch(exist_ok=True)
-    except OSError as exc:
-        raise ConfigError(f"Cannot create file for {field_name}: {path}. {exc}") from exc
-    if not path.is_file():
-        raise ConfigError(f"Path for {field_name} is not a file: {path}")
 
 
 def _bootstrap_cloud_targets(cfg: AppConfig) -> None:

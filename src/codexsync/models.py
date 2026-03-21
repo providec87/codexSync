@@ -89,6 +89,9 @@ class LoggingConfig:
     file: Path | None = None
     format: str = "text"
     retention_days: int = 7
+    archive_mode: str = "zip"
+    max_file_size_mb: int = 10
+    machine_id: str | None = None
 
 
 @dataclass(slots=True)

@@ -23,7 +23,7 @@ from codexsync.models import (
 
 
 class BootstrapTests(unittest.TestCase):
-    def test_initialize_runtime_paths_creates_dirs_and_files(self) -> None:
+    def test_initialize_runtime_paths_creates_dirs_and_scaffolding(self) -> None:
         root = Path.cwd() / "test-sandbox" / f"bootstrap-{uuid.uuid4().hex}"
         local_state = root / "local-state"
         cloud_root = root / "sync"
@@ -66,7 +66,8 @@ class BootstrapTests(unittest.TestCase):
             self.assertTrue(cloud_root.is_dir())
             self.assertTrue(backup_root.is_dir())
             self.assertTrue(temp_root.is_dir())
-            self.assertTrue(log_file.is_file())
+            self.assertTrue(log_file.parent.is_dir())
+            self.assertFalse(log_file.exists())
             self.assertTrue(manifest_file.is_file())
             self.assertTrue((cloud_root / "sessions").is_dir())
             self.assertTrue((cloud_root / "skills").is_dir())

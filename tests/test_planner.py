@@ -158,6 +158,71 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(len(plan.to_cloud), 1)
         self.assertEqual(plan.conflicts, [])
 
+    def test_equal_mtime_skip_by_default(self) -> None:
+        rel = "sessions/a.json"
+        local_index = {rel: _file_meta(rel, mtime_ns=100, size=11)}
+        cloud_index = {rel: _file_meta(rel, mtime_ns=100, size=12)}
+
+        plan = build_sync_plan(
+            local_index=local_index,
+            cloud_index=cloud_index,
+            local_root=Path("/local"),
+            cloud_root=Path("/cloud"),
+        )
+
+        self.assertEqual(plan.action_count, 0)
+        self.assertEqual(plan.conflicts, [])
+
+    def test_equal_mtime_prefer_local(self) -> None:
+        rel = "sessions/a.json"
+        local_index = {rel: _file_meta(rel, mtime_ns=100, size=11)}
+        cloud_index = {rel: _file_meta(rel, mtime_ns=100, size=12)}
+
+        plan = build_sync_plan(
+            local_index=local_index,
+            cloud_index=cloud_index,
+            local_root=Path("/local"),
+            cloud_root=Path("/cloud"),
+            equal_mtime_action="prefer_local",
+        )
+
+        self.assertEqual(len(plan.to_cloud), 1)
+        self.assertEqual(len(plan.to_local), 0)
+        self.assertEqual(plan.conflicts, [])
+
+    def test_equal_mtime_prefer_cloud(self) -> None:
+        rel = "sessions/a.json"
+        local_index = {rel: _file_meta(rel, mtime_ns=100, size=11)}
+        cloud_index = {rel: _file_meta(rel, mtime_ns=100, size=12)}
+
+        plan = build_sync_plan(
+            local_index=local_index,
+            cloud_index=cloud_index,
+            local_root=Path("/local"),
+            cloud_root=Path("/cloud"),
+            equal_mtime_action="prefer_cloud",
+        )
+
+        self.assertEqual(len(plan.to_local), 1)
+        self.assertEqual(len(plan.to_cloud), 0)
+        self.assertEqual(plan.conflicts, [])
+
+    def test_equal_mtime_manual_abort(self) -> None:
+        rel = "sessions/a.json"
+        local_index = {rel: _file_meta(rel, mtime_ns=100, size=11)}
+        cloud_index = {rel: _file_meta(rel, mtime_ns=100, size=12)}
+
+        plan = build_sync_plan(
+            local_index=local_index,
+            cloud_index=cloud_index,
+            local_root=Path("/local"),
+            cloud_root=Path("/cloud"),
+            equal_mtime_action="manual_abort",
+        )
+
+        self.assertEqual(plan.action_count, 0)
+        self.assertEqual(plan.conflicts, [rel])
+
 
 if __name__ == "__main__":
     unittest.main()

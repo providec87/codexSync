@@ -13,6 +13,7 @@ def build_sync_plan(
     previous_manifest: SyncManifest | None = None,
     tolerance_seconds: int = 0,
     conflict_policy: str = "manual_abort",
+    equal_mtime_action: str = "skip",
 ) -> SyncPlan:
     """
     Builds a bidirectional copy plan with conflict detection.
@@ -67,6 +68,20 @@ def build_sync_plan(
                 plan.to_local.append(CopyAction(cloud_meta.abs_path, local_root / rel, rel))
                 continue
 
+        if abs(local_meta.mtime_ns - cloud_meta.mtime_ns) <= tolerance_ns:
+            resolved = _resolve_equal_mtime(
+                rel=rel,
+                local_meta=local_meta,
+                cloud_meta=cloud_meta,
+                local_root=local_root,
+                cloud_root=cloud_root,
+                plan=plan,
+                equal_mtime_action=equal_mtime_action,
+            )
+            if not resolved:
+                plan.conflicts.append(rel)
+            continue
+
         if local_meta.mtime_ns > cloud_meta.mtime_ns:
             plan.to_cloud.append(CopyAction(local_meta.abs_path, cloud_root / rel, rel))
         else:
@@ -96,6 +111,28 @@ def _resolve_conflict(
         else:
             plan.to_local.append(CopyAction(cloud_meta.abs_path, local_root / rel, rel))
         return True
+    return False
+
+
+def _resolve_equal_mtime(
+    rel: str,
+    local_meta: FileMeta,
+    cloud_meta: FileMeta,
+    local_root: Path,
+    cloud_root: Path,
+    plan: SyncPlan,
+    equal_mtime_action: str,
+) -> bool:
+    if equal_mtime_action == "skip":
+        return True
+    if equal_mtime_action == "prefer_local":
+        plan.to_cloud.append(CopyAction(local_meta.abs_path, cloud_root / rel, rel))
+        return True
+    if equal_mtime_action == "prefer_cloud":
+        plan.to_local.append(CopyAction(cloud_meta.abs_path, local_root / rel, rel))
+        return True
+    if equal_mtime_action == "manual_abort":
+        return False
     return False
 
 

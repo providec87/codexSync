@@ -8,6 +8,7 @@ import unittest
 import uuid
 
 from codexsync.config import load_config
+from codexsync.exceptions import ConfigError
 
 
 class ConfigTests(unittest.TestCase):
@@ -123,6 +124,98 @@ class ConfigTests(unittest.TestCase):
                 ["codex-macos-helper"],
             )
             self.assertEqual(cfg.process_detection.background_process_names["linux"], [])
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
+    def test_sync_mode_values_are_normalized_and_validated(self) -> None:
+        root = Path.cwd() / "test-sandbox" / f"config-sync-mode-{uuid.uuid4().hex}"
+        root.mkdir(parents=True, exist_ok=False)
+        try:
+            cfg_path = root / "config.toml"
+            cfg_path.write_text(
+                textwrap.dedent(
+                    """
+                    [sync]
+                    mode = "cold"
+                    direction = "bidirectional"
+                    compare = "mtime"
+                    delete_policy = "never"
+                    equal_mtime_action = "PREFER_LOCAL"
+                    session_mode = "LAST_DATE_ONLY"
+
+                    [paths]
+                    cloud_root_dir = "sync"
+                    backup_dir = "backups"
+                    temp_dir = ".tmp"
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            cfg = load_config(cfg_path)
+            self.assertEqual(cfg.sync.equal_mtime_action, "prefer_local")
+            self.assertEqual(cfg.sync.session_mode, "last_date_only")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
+    def test_invalid_equal_mtime_action_fails(self) -> None:
+        root = Path.cwd() / "test-sandbox" / f"config-eq-mtime-{uuid.uuid4().hex}"
+        root.mkdir(parents=True, exist_ok=False)
+        try:
+            cfg_path = root / "config.toml"
+            cfg_path.write_text(
+                textwrap.dedent(
+                    """
+                    [sync]
+                    mode = "cold"
+                    direction = "bidirectional"
+                    compare = "mtime"
+                    delete_policy = "never"
+                    equal_mtime_action = "unknown"
+
+                    [paths]
+                    cloud_root_dir = "sync"
+                    backup_dir = "backups"
+                    temp_dir = ".tmp"
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ConfigError, "sync.equal_mtime_action"):
+                load_config(cfg_path)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
+    def test_invalid_session_mode_fails(self) -> None:
+        root = Path.cwd() / "test-sandbox" / f"config-session-mode-{uuid.uuid4().hex}"
+        root.mkdir(parents=True, exist_ok=False)
+        try:
+            cfg_path = root / "config.toml"
+            cfg_path.write_text(
+                textwrap.dedent(
+                    """
+                    [sync]
+                    mode = "cold"
+                    direction = "bidirectional"
+                    compare = "mtime"
+                    delete_policy = "never"
+                    session_mode = "latest_only"
+
+                    [paths]
+                    cloud_root_dir = "sync"
+                    backup_dir = "backups"
+                    temp_dir = ".tmp"
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ConfigError, "sync.session_mode"):
+                load_config(cfg_path)
         finally:
             shutil.rmtree(root, ignore_errors=True)
 

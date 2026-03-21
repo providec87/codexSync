@@ -6,6 +6,7 @@ import platform
 import sys
 import time
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 from .backup import BackupManager
@@ -69,6 +70,7 @@ def build_context(
         previous_manifest=manifest,
         tolerance_seconds=cfg.sync.time_tolerance_seconds,
         conflict_policy=cfg.conflict.policy,
+        equal_mtime_action=cfg.sync.equal_mtime_action,
     )
     return AppContext(
         config=cfg,
@@ -191,7 +193,88 @@ def _build_indexes(cfg: AppConfig, local_dir: Path, cloud_dir: Path) -> tuple[di
     path_filter = PathFilter(cfg.filters.exclude_globs)
     local_idx = scan_tree(local_dir, cfg.targets.include_roots, path_filter)
     cloud_idx = scan_tree(cloud_dir, cfg.targets.include_roots, path_filter)
-    return local_idx, cloud_idx
+    return _apply_session_mode(local_idx, cloud_idx, cfg.sync.session_mode)
+
+
+def _apply_session_mode(
+    local_idx: dict[str, FileMeta],
+    cloud_idx: dict[str, FileMeta],
+    session_mode: str | None,
+) -> tuple[dict[str, FileMeta], dict[str, FileMeta]]:
+    mode = (session_mode or "all").strip().lower()
+    if mode != "last_date_only":
+        return local_idx, cloud_idx
+
+    latest_key = _latest_sessions_date_key(local_idx, cloud_idx)
+    if latest_key is None:
+        LOG.warning(
+            "sync.session_mode=last_date_only is set, but no date-based sessions folders were detected. "
+            "Proceeding with all sessions files."
+        )
+        return local_idx, cloud_idx
+
+    LOG.info("sync.session_mode=last_date_only: only sessions for %s will be included", latest_key)
+    return (
+        _filter_sessions_by_date_key(local_idx, latest_key),
+        _filter_sessions_by_date_key(cloud_idx, latest_key),
+    )
+
+
+def _filter_sessions_by_date_key(index: dict[str, FileMeta], date_key: str) -> dict[str, FileMeta]:
+    filtered: dict[str, FileMeta] = {}
+    for rel, meta in index.items():
+        session_date = _extract_session_date_key(rel)
+        if session_date is None:
+            if not rel.startswith("sessions/"):
+                filtered[rel] = meta
+            continue
+        if session_date == date_key:
+            filtered[rel] = meta
+    return filtered
+
+
+def _latest_sessions_date_key(local_idx: dict[str, FileMeta], cloud_idx: dict[str, FileMeta]) -> str | None:
+    all_dates: set[str] = set()
+    for rel in set(local_idx.keys()) | set(cloud_idx.keys()):
+        date_key = _extract_session_date_key(rel)
+        if date_key:
+            all_dates.add(date_key)
+    if not all_dates:
+        return None
+    return sorted(all_dates)[-1]
+
+
+def _extract_session_date_key(rel: str) -> str | None:
+    normalized = rel.strip("/\\")
+    if not normalized.startswith("sessions/"):
+        return None
+
+    parts = normalized.split("/")
+    if len(parts) >= 2 and _is_iso_date(parts[1]):
+        return parts[1]
+    if len(parts) >= 4 and _is_ymd_triplet(parts[1], parts[2], parts[3]):
+        return f"{parts[1]}-{parts[2]}-{parts[3]}"
+    return None
+
+
+def _is_iso_date(value: str) -> bool:
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_ymd_triplet(year: str, month: str, day: str) -> bool:
+    if len(year) != 4 or len(month) != 2 or len(day) != 2:
+        return False
+    if not (year.isdigit() and month.isdigit() and day.isdigit()):
+        return False
+    try:
+        date(int(year), int(month), int(day))
+    except ValueError:
+        return False
+    return True
 
 
 def _enforce_safety_preconditions(

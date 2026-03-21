@@ -14,13 +14,15 @@ direction = "bidirectional"
 compare = "mtime"
 # Time tolerance (seconds) to smooth small filesystem timestamp differences
 time_tolerance_seconds = 0
-# If mtimes are equal, do nothing (allowed by the operational protocol)
+# Action when mtimes are equal (within tolerance):
+# skip|prefer_local|prefer_cloud|manual_abort
 equal_mtime_action = "skip"
 # Do not propagate deletions (safe mode)
 delete_policy = "never"
 # Enable dry-run by default
 dry_run_default = true
-# Session mode: sync only the latest date folder under .codex/sessions
+# Session mode:
+# all|last_date_only (latest date folder under sessions/, if date-based layout is detected)
 session_mode = "last_date_only"
 
 [paths]

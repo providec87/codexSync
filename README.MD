@@ -48,6 +48,22 @@ Developers may want to continue working with Codex on another machine without lo
 - `prefer_local`: auto-resolve conflict by taking local version
 - `prefer_newer_mtime`: auto-resolve conflict by taking side with newer mtime
 
+## Sync options
+
+`sync.equal_mtime_action` controls behavior when file mtimes are equal (within `sync.time_tolerance_seconds`) but files differ:
+
+- `skip`: do not copy (default)
+- `prefer_local`: copy local version to cloud
+- `prefer_cloud`: copy cloud version to local
+- `manual_abort`: mark as conflict and stop in `manual_abort` conflict mode
+
+`sync.session_mode` controls scope of `sessions` sync:
+
+- `all`: sync all `sessions` content (default behavior)
+- `last_date_only`: sync only the latest date-based folder under `sessions`
+  - supported layouts: `sessions/YYYY-MM-DD/...` and `sessions/YYYY/MM/DD/...`
+  - if no date-based layout is detected, codexSync logs a warning and syncs all `sessions` files
+
 ## Logging
 
 - Levels: `DEBUG|INFO|WARNING|ERROR`

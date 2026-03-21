@@ -121,10 +121,14 @@ def load_config(path: Path) -> AppConfig:
         direction=sync_raw.get("direction", "bidirectional"),
         compare=sync_raw.get("compare", "mtime"),
         time_tolerance_seconds=int(sync_raw.get("time_tolerance_seconds", 0)),
-        equal_mtime_action=sync_raw.get("equal_mtime_action", "skip"),
+        equal_mtime_action=str(sync_raw.get("equal_mtime_action", "skip")).strip().lower(),
         dry_run_default=bool(sync_raw.get("dry_run_default", True)),
         delete_policy=sync_raw.get("delete_policy", "never"),
-        session_mode=sync_raw.get("session_mode"),
+        session_mode=(
+            str(sync_raw.get("session_mode")).strip().lower()
+            if sync_raw.get("session_mode") is not None
+            else None
+        ),
     )
 
     safety = SafetyConfig(
@@ -213,6 +217,16 @@ def _validate_config(cfg: AppConfig) -> None:
 
     if cfg.sync.time_tolerance_seconds < 0:
         raise ConfigError("sync.time_tolerance_seconds must be >= 0")
+
+    allowed_equal_mtime_actions = {"skip", "prefer_local", "prefer_cloud", "manual_abort"}
+    if cfg.sync.equal_mtime_action not in allowed_equal_mtime_actions:
+        raise ConfigError(
+            "sync.equal_mtime_action must be one of: skip, prefer_local, prefer_cloud, manual_abort"
+        )
+
+    allowed_session_modes = {None, "all", "last_date_only"}
+    if cfg.sync.session_mode not in allowed_session_modes:
+        raise ConfigError("sync.session_mode must be one of: all, last_date_only")
 
     allowed_conflict_policies = {"manual_abort", "prefer_cloud", "prefer_local", "prefer_newer_mtime"}
     if cfg.conflict.policy not in allowed_conflict_policies:

@@ -7,8 +7,10 @@ from pathlib import Path
 from .app import (
     build_context,
     collect_process_snapshot,
+    print_preflight_report,
     print_plan,
     restore_from_backup,
+    run_preflight,
     run_sync,
     validate_config_only,
 )
@@ -49,6 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("validate", help="Validate config only")
+    sub.add_parser("doctor", help="Run environment diagnostics before sync")
+    sub.add_parser("preflight", help="Run environment diagnostics before sync")
     sub.add_parser("plan", help="Build and print sync plan")
 
     sync = sub.add_parser("sync", help="Run synchronization")
@@ -97,6 +101,15 @@ def main(argv: list[str] | None = None) -> int:
             validate_config_only(config_path)
             print("Config is valid.")
             return int(ExitCode.OK)
+
+        if args.command in {"doctor", "preflight"}:
+            report = run_preflight(config_path)
+            print_preflight_report(report)
+            if report.is_ok:
+                print("Preflight checks passed.")
+                return int(ExitCode.OK)
+            print("Preflight checks failed.")
+            return int(ExitCode.FAIL_SAFE)
 
         if args.command == "plan":
             ctx = build_context(

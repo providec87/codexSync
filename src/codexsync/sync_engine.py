@@ -26,6 +26,8 @@ class SyncEngine:
         self._fail_on_unknown = fail_on_unknown
 
     def execute(self, plan: SyncPlan, dry_run: bool = True) -> None:
+        if not dry_run:
+            self._cleanup_orphaned_temp_files()
         for action in plan.to_local:
             self._copy(action, dry_run=dry_run)
         for action in plan.to_cloud:
@@ -50,8 +52,14 @@ class SyncEngine:
             os.replace(staged, action.dst)
         except OSError:
             if self._fail_on_unknown:
+                LOG.exception("atomic replace failed for staged file %s -> %s", staged, action.dst)
                 raise
-            shutil.copy2(staged, action.dst)
+            try:
+                shutil.copy2(staged, action.dst)
+            except OSError:
+                LOG.exception("fallback copy failed for staged file %s -> %s", staged, action.dst)
+                raise
+        finally:
             staged.unlink(missing_ok=True)
 
     @staticmethod
@@ -69,3 +77,15 @@ class SyncEngine:
             fallback.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(action.src, fallback)
             return fallback
+
+    def _cleanup_orphaned_temp_files(self) -> None:
+        if not self._temp_dir.exists():
+            return
+        removed = 0
+        for path in self._temp_dir.rglob("*.tmp"):
+            if not path.is_file():
+                continue
+            path.unlink(missing_ok=True)
+            removed += 1
+        if removed:
+            LOG.info("removed %d orphaned temporary file(s) in %s", removed, self._temp_dir)

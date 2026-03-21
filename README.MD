@@ -112,6 +112,13 @@ Validation:
 python -m codexsync -c config.toml validate
 ```
 
+Preflight diagnostics (same behavior for `doctor` and `preflight`):
+
+```powershell
+python -m codexsync -c config.toml doctor
+python -m codexsync -c config.toml preflight
+```
+
 Build sync plan (no changes):
 
 ```powershell
@@ -228,6 +235,11 @@ Termination-related exit codes for automation:
 - `3` Codex is running (cold sync precondition failed)
 - `4` invalid config or CLI arguments
 - `5` safe abort (`fail-safe`)
+
+`doctor`/`preflight` return:
+
+- `0` when all checks passed or warnings only
+- `5` when at least one preflight check failed
 
 ## Required operation protocol
 

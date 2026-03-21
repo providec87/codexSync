@@ -52,6 +52,34 @@ class ProcessSnapshot:
     sandbox_detected: bool
 
 
+@dataclass(slots=True, frozen=True)
+class PreflightCheckResult:
+    name: str
+    status: str
+    details: str
+
+
+@dataclass(slots=True)
+class PreflightReport:
+    checks: list[PreflightCheckResult]
+
+    @property
+    def failures(self) -> list[PreflightCheckResult]:
+        return [item for item in self.checks if item.status == "FAIL"]
+
+    @property
+    def warnings(self) -> list[PreflightCheckResult]:
+        return [item for item in self.checks if item.status == "WARN"]
+
+    @property
+    def passed(self) -> list[PreflightCheckResult]:
+        return [item for item in self.checks if item.status == "PASS"]
+
+    @property
+    def is_ok(self) -> bool:
+        return not self.failures
+
+
 def build_context(
     config_path: Path,
     manual_terminate_confirmation_override: bool | None = None,
@@ -182,6 +210,63 @@ def validate_config_only(config_path: Path) -> None:
         _ = resolve_state_dirs(cfg.paths.local_state_dir, cfg.paths.cloud_root_dir)
     except ConfigError:
         raise
+
+
+def run_preflight(config_path: Path) -> PreflightReport:
+    checks: list[PreflightCheckResult] = []
+
+    try:
+        cfg = load_config(config_path)
+        checks.append(PreflightCheckResult("config", "PASS", f"Loaded config from {config_path}"))
+    except Exception as exc:
+        checks.append(PreflightCheckResult("config", "FAIL", f"Cannot load config: {exc}"))
+        return PreflightReport(checks=checks)
+
+    try:
+        initialize_runtime_paths(cfg)
+        checks.append(PreflightCheckResult("runtime_paths", "PASS", "Runtime paths are initialized"))
+    except Exception as exc:
+        checks.append(PreflightCheckResult("runtime_paths", "FAIL", f"Runtime path initialization failed: {exc}"))
+        return PreflightReport(checks=checks)
+
+    local_dir: Path | None = None
+    cloud_dir: Path | None = None
+    try:
+        local_dir, cloud_dir = resolve_state_dirs(cfg.paths.local_state_dir, cfg.paths.cloud_root_dir)
+        checks.append(PreflightCheckResult("state_dirs", "PASS", f"local={local_dir}; cloud={cloud_dir}"))
+    except Exception as exc:
+        checks.append(PreflightCheckResult("state_dirs", "FAIL", f"State directories are not ready: {exc}"))
+
+    if local_dir is not None:
+        checks.append(_check_write_access("local_write", local_dir))
+    if cloud_dir is not None:
+        checks.append(_check_write_access("cloud_write", cloud_dir))
+
+    checks.append(_check_write_access("backup_write", cfg.paths.backup_dir))
+    checks.append(_check_write_access("temp_write", cfg.paths.temp_dir))
+
+    try:
+        _ = load_manifest(cfg.state.manifest_file, cfg.state.data_version)
+        checks.append(PreflightCheckResult("manifest", "PASS", "Manifest data version is compatible"))
+    except Exception as exc:
+        checks.append(PreflightCheckResult("manifest", "FAIL", f"Manifest check failed: {exc}"))
+
+    checks.append(_check_process_state(cfg))
+    if local_dir is not None and cloud_dir is not None:
+        checks.append(_check_clock_drift(local_dir, cloud_dir))
+    checks.append(_check_orphan_temp_files(cfg.paths.temp_dir))
+
+    return PreflightReport(checks=checks)
+
+
+def print_preflight_report(report: PreflightReport) -> None:
+    print("Preflight report:")
+    for item in report.checks:
+        print(f"  [{item.status}] {item.name}: {item.details}")
+    print(
+        "Summary: "
+        f"pass={len(report.passed)} warn={len(report.warnings)} fail={len(report.failures)}"
+    )
 
 
 def initialize_runtime_paths(cfg: AppConfig) -> None:
@@ -546,3 +631,72 @@ def _is_included_root(relative_path: str, include_roots: list[str]) -> bool:
         if rel == root or rel.startswith(f"{root}/"):
             return True
     return False
+
+
+def _check_write_access(name: str, directory: Path) -> PreflightCheckResult:
+    probe = directory / f".codexsync-preflight-{uuid.uuid4().hex}.tmp"
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        with probe.open("w", encoding="utf-8") as fh:
+            fh.write("ok")
+        return PreflightCheckResult(name, "PASS", f"Write access confirmed for {directory}")
+    except Exception as exc:
+        return PreflightCheckResult(name, "FAIL", f"Cannot write to {directory}: {exc}")
+    finally:
+        probe.unlink(missing_ok=True)
+
+
+def _check_process_state(cfg: AppConfig) -> PreflightCheckResult:
+    if not cfg.safety.require_codex_stopped:
+        return PreflightCheckResult("codex_process", "WARN", "Process check is disabled by safety.require_codex_stopped=false")
+
+    try:
+        snapshot = collect_process_snapshot(cfg)
+    except Exception as exc:
+        if cfg.safety.fail_on_unknown:
+            return PreflightCheckResult("codex_process", "FAIL", f"Cannot verify process state safely: {exc}")
+        return PreflightCheckResult("codex_process", "WARN", f"Process check unavailable: {exc}")
+
+    if snapshot.sandbox_detected:
+        return PreflightCheckResult("codex_process", "FAIL", "codex-windows-sandbox is running")
+    if snapshot.main_processes:
+        details = ", ".join(f"{proc.name}:{proc.pid}" for proc in snapshot.main_processes)
+        return PreflightCheckResult("codex_process", "FAIL", f"Codex process is running: {details}")
+    return PreflightCheckResult("codex_process", "PASS", "Codex process is not running")
+
+
+def _check_clock_drift(local_dir: Path, cloud_dir: Path) -> PreflightCheckResult:
+    local_probe = local_dir / f".codexsync-clock-{uuid.uuid4().hex}.tmp"
+    cloud_probe = cloud_dir / f".codexsync-clock-{uuid.uuid4().hex}.tmp"
+    threshold_seconds = 5
+    try:
+        local_probe.write_text("clock", encoding="utf-8")
+        cloud_probe.write_text("clock", encoding="utf-8")
+        local_mtime = local_probe.stat().st_mtime_ns
+        cloud_mtime = cloud_probe.stat().st_mtime_ns
+        delta_seconds = abs(local_mtime - cloud_mtime) / 1_000_000_000
+        if delta_seconds > threshold_seconds:
+            return PreflightCheckResult(
+                "clock_drift",
+                "WARN",
+                f"Suspicious mtime delta between local/cloud probes: {delta_seconds:.3f}s (> {threshold_seconds}s)",
+            )
+        return PreflightCheckResult("clock_drift", "PASS", f"Probe mtime delta={delta_seconds:.3f}s")
+    except Exception as exc:
+        return PreflightCheckResult("clock_drift", "WARN", f"Clock drift probe failed: {exc}")
+    finally:
+        local_probe.unlink(missing_ok=True)
+        cloud_probe.unlink(missing_ok=True)
+
+
+def _check_orphan_temp_files(temp_dir: Path) -> PreflightCheckResult:
+    if not temp_dir.exists():
+        return PreflightCheckResult("orphan_temp_files", "PASS", "Temp directory does not exist yet")
+    orphan_files = [path for path in temp_dir.rglob("*.tmp") if path.is_file()]
+    if orphan_files:
+        return PreflightCheckResult(
+            "orphan_temp_files",
+            "WARN",
+            f"Found {len(orphan_files)} orphan temp file(s) in {temp_dir}",
+        )
+    return PreflightCheckResult("orphan_temp_files", "PASS", "No orphan temp files found")

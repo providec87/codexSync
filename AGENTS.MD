@@ -49,3 +49,4 @@ Implement:
 * Config file support
 * Logging
 * Dry-run mode
+* Doctor/preflight diagnostics mode before sync

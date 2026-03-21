@@ -32,3 +32,15 @@ These checks are out of scope and owned by the user.
 ## D-009: CI target matrix for MVP
 CI runs on Windows and macOS runners (`windows-latest`, `macos-latest`).
 Linux CI is intentionally disabled for MVP until Linux runtime support is explicitly in scope.
+
+## D-010: Preflight diagnostics mode
+The CLI provides `doctor` and `preflight` commands (equivalent behavior).
+These checks are read-mostly and validate runtime readiness before sync:
+- config/runtime path readiness
+- local/cloud/backup/temp write access probes
+- Codex process precondition
+- manifest data-version compatibility
+- suspicious mtime drift between local/cloud probes
+- orphan temp file detection
+
+If any preflight check fails, the command exits with code `5` (`fail-safe`).

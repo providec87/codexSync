@@ -70,9 +70,11 @@ class BackupManager:
     def _backup_file_zip(self, file_path: Path, relative_path: str) -> Path:
         snapshot_zip = self._snapshot_path
         snapshot_zip.parent.mkdir(parents=True, exist_ok=True)
-        arcname = relative_path.replace("\\", "/")
-        arcname = self._deduplicate_zip_entry(arcname)
         with zipfile.ZipFile(snapshot_zip, mode="a", compression=zipfile.ZIP_DEFLATED) as zf:
+            if not self._zip_entries:
+                self._zip_entries.update(zf.namelist())
+            arcname = relative_path.replace("\\", "/")
+            arcname = self._deduplicate_zip_entry(arcname)
             zf.write(file_path, arcname=arcname)
         return snapshot_zip
 

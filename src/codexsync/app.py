@@ -529,12 +529,13 @@ def _resolve_restore_target(cfg: AppConfig, target: str) -> Path:
 
 
 def _resolve_snapshot_dir(backup_root: Path, snapshot_name: str | None) -> Path:
+    backup_root = backup_root.resolve()
     if snapshot_name:
-        snapshot = (backup_root / snapshot_name).resolve()
+        snapshot = _resolve_snapshot_candidate(backup_root, snapshot_name)
         if snapshot.exists() and _is_supported_snapshot(snapshot):
             return snapshot
         if snapshot.suffix.lower() != ".zip":
-            zip_candidate = (backup_root / f"{snapshot_name}.zip").resolve()
+            zip_candidate = _resolve_snapshot_candidate(backup_root, f"{snapshot_name}.zip")
             if zip_candidate.exists() and _is_supported_snapshot(zip_candidate):
                 return zip_candidate
         raise ConfigError(f"Backup snapshot not found: {snapshot_name}")
@@ -548,6 +549,17 @@ def _resolve_snapshot_dir(backup_root: Path, snapshot_name: str | None) -> Path:
 
 def _is_supported_snapshot(path: Path) -> bool:
     return path.is_dir() or (path.is_file() and path.suffix.lower() == ".zip")
+
+
+def _resolve_snapshot_candidate(backup_root: Path, snapshot_name: str) -> Path:
+    candidate = (backup_root / snapshot_name).resolve()
+    try:
+        candidate.relative_to(backup_root)
+    except ValueError as exc:
+        raise ConfigError(
+            f"Backup snapshot must point inside backup_dir: {snapshot_name}"
+        ) from exc
+    return candidate
 
 
 def _build_restore_plan_from_snapshot(
@@ -577,10 +589,9 @@ def _build_restore_plan_from_zip_snapshot(
     exclude_globs: list[str],
     temp_root: Path,
 ) -> tuple[SyncPlan, Path]:
-    _ = temp_root
     path_filter = PathFilter(exclude_globs)
     allowed_roots = [root.strip("/\\") for root in include_roots if root.strip("/\\")]
-    staging_dir = target_root / f".codexsync-restore-{uuid.uuid4().hex}"
+    staging_dir = temp_root / f".codexsync-restore-{uuid.uuid4().hex}"
     staging_dir.mkdir(parents=True, exist_ok=True)
 
     actions: list[CopyAction] = []
@@ -626,6 +637,8 @@ def _build_restore_plan(
 
 
 def _is_included_root(relative_path: str, include_roots: list[str]) -> bool:
+    if not include_roots:
+        return True
     rel = relative_path.strip("/\\")
     for root in include_roots:
         if rel == root or rel.startswith(f"{root}/"):
